@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Recursos interactivos · CICO2000</title>
+<meta name="description" content="Catálogo de recursos interactivos de la asignatura Análisis de Datos y Visualización (CICO2000).">
+<style>
+:root{--bg:#f4f6fa;--surface:#fff;--ink:#14213d;--ink-2:#4a5670;--muted:#6b7690;--line:#d8deea;--brand:#1f5fbf;--brand-soft:#e3ecfb}
+@media (prefers-color-scheme: dark){:root{--bg:#0e1522;--surface:#162134;--ink:#e8eef8;--ink-2:#b7c3d8;--muted:#8e9bb3;--line:#2a3a55;--brand:#5b9bff;--brand-soft:#1d3358}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif}
+.wrap{max-width:960px;margin:0 auto;padding:32px 16px}
+h1{margin:0 0 6px;font-size:28px}
+p{color:var(--ink-2);margin:0 0 20px}
+.unit{margin:28px 0 10px;font-size:13px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--brand)}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px}
+a.card{display:block;text-decoration:none;color:inherit;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:18px;transition:border-color .15s,transform .15s}
+a.card:hover{border-color:var(--brand);transform:translateY(-2px)}
+.tag{display:inline-block;font-size:12px;font-weight:600;padding:2px 8px;border-radius:99px;background:var(--brand-soft);color:var(--brand);margin-bottom:8px}
+.card h3{margin:0 0 6px;font-size:18px}
+.card small{color:var(--muted)}
+footer{margin-top:36px;font-size:12px;color:var(--muted)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Recursos interactivos</h1>
+  <p>Análisis de Datos y Visualización (CICO2000) · Ingeniería en Redes y Analítica de Datos</p>
+
+  <div class="unit">Unidad 2 · Fundamentos del análisis exploratorio de datos</div>
+  <div class="grid">
+    <!-- Para añadir un recurso: copie este bloque y cambie la ruta, la etiqueta, el título y la descripción -->
+    <a class="card" href="recursos/s4-consumo-apis/">
+      <span class="tag">Semana 4 · Simulación</span>
+      <h3>Misión API</h3>
+      <small>Consumo de datos mediante APIs REST: endpoint, métodos HTTP, autenticación, códigos de estado y lectura de JSON.</small>
+    </a>
+  </div>
+
+  <footer>Autora: Ing. Janneth Chicaiza Espinosa. Los datos y servicios de las simulaciones son ficticios y con fines educativos.</footer>
+</div>
+</body>
+</html>

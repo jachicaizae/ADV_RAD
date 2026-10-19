@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Misión API · Consumo de datos mediante APIs</title>
+<meta name="description" content="Recurso interactivo de la asignatura Análisis de Datos y Visualización (CICO2000): consumo de datos mediante APIs REST.">
+<style>
+:root{
+  --bg:#f4f6fa; --surface:#ffffff; --surface-2:#eef2f8; --ink:#14213d; --ink-2:#4a5670; --muted:#6b7690;
+  --line:#d8deea; --brand:#1f5fbf; --brand-ink:#ffffff; --brand-soft:#e3ecfb;
+  --ok:#1d7a46; --ok-soft:#e2f4ea; --bad:#b3261e; --bad-soft:#fbe7e6; --warn:#8a5a00; --warn-soft:#fdf1d6;
+  --code-bg:#0f1b2e; --code-ink:#e6edf7; --k:#7cc4ff; --s:#a8e39b; --n:#ffd479; --p:#c9d3e3;
+  --radius:14px; --shadow:0 6px 24px rgba(20,33,61,.08);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0e1522; --surface:#162134; --surface-2:#1c2a41; --ink:#e8eef8; --ink-2:#b7c3d8; --muted:#8e9bb3;
+    --line:#2a3a55; --brand:#5b9bff; --brand-ink:#0b1320; --brand-soft:#1d3358;
+    --ok:#5fd394; --ok-soft:#153526; --bad:#ff8a80; --bad-soft:#3a1d1c; --warn:#ffc857; --warn-soft:#3a2f14;
+    --code-bg:#0a1220; --shadow:0 6px 24px rgba(0,0,0,.35);
+  }
+}
+:root[data-theme="dark"]{
+    --bg:#0e1522; --surface:#162134; --surface-2:#1c2a41; --ink:#e8eef8; --ink-2:#b7c3d8; --muted:#8e9bb3;
+    --line:#2a3a55; --brand:#5b9bff; --brand-ink:#0b1320; --brand-soft:#1d3358;
+    --ok:#5fd394; --ok-soft:#153526; --bad:#ff8a80; --bad-soft:#3a1d1c; --warn:#ffc857; --warn-soft:#3a2f14;
+    --code-bg:#0a1220; --shadow:0 6px 24px rgba(0,0,0,.35);
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font:16px/1.55 system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif}
+a{color:var(--brand)}
+.app{max-width:960px;margin:0 auto;padding:16px 16px 40px}
+header.top{display:flex;align-items:center;gap:12px;justify-content:space-between;margin-bottom:12px}
+.course{font-size:13px;color:var(--muted);letter-spacing:.02em}
+.tools{display:flex;gap:8px}
+.icon-btn{border:1px solid var(--line);background:var(--surface);color:var(--ink-2);border-radius:10px;padding:6px 10px;font:inherit;font-size:14px;cursor:pointer}
+.icon-btn:hover{border-color:var(--brand);color:var(--brand)}
+.progress{display:flex;align-items:center;gap:10px;margin:4px 0 14px}
+.bar{flex:1;height:8px;background:var(--surface-2);border-radius:99px;overflow:hidden}
+.bar>span{display:block;height:100%;width:0;background:var(--brand);border-radius:99px;transition:width .4s ease}
+.progress small{color:var(--muted);min-width:64px;text-align:right}
+.steps{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
+.step{font-size:12px;padding:3px 9px;border-radius:99px;background:var(--surface-2);color:var(--muted);border:1px solid transparent}
+.step.done{background:var(--ok-soft);color:var(--ok)}
+.step.now{border-color:var(--brand);color:var(--brand);background:var(--brand-soft)}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:28px}
+.kicker{font-size:13px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--brand);margin:0 0 6px}
+h1{font-size:30px;line-height:1.2;margin:0 0 12px}
+h2{font-size:24px;line-height:1.25;margin:0 0 12px}
+p{margin:0 0 12px;color:var(--ink-2)}
+p.lead{font-size:18px}
+.grid{display:grid;gap:12px}
+.g2{grid-template-columns:repeat(2,minmax(0,1fr))}
+.g4{grid-template-columns:repeat(4,minmax(0,1fr))}
+@media (max-width:720px){.g2,.g4{grid-template-columns:1fr}.card{padding:20px}h1{font-size:25px}h2{font-size:21px}}
+.opt{display:flex;gap:12px;align-items:flex-start;text-align:left;width:100%;background:var(--surface);border:1.5px solid var(--line);border-radius:12px;padding:14px;font:inherit;color:var(--ink);cursor:pointer;transition:border-color .15s,background .15s,transform .1s}
+.opt:hover{border-color:var(--brand);background:var(--brand-soft)}
+.opt:active{transform:scale(.99)}
+.opt[aria-pressed="true"]{border-color:var(--brand);background:var(--brand-soft)}
+.opt.correct{border-color:var(--ok);background:var(--ok-soft)}
+.opt.wrong{border-color:var(--bad);background:var(--bad-soft)}
+.opt .ico{flex:0 0 36px;height:36px;border-radius:10px;background:var(--surface-2);display:grid;place-items:center;color:var(--brand)}
+.opt b{display:block;margin-bottom:2px}
+.opt span.sub{font-size:14px;color:var(--muted)}
+.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace}
+.feedback{margin-top:14px;border-radius:12px;padding:12px 14px;font-size:15px;display:none}
+.feedback.show{display:block}
+.feedback.ok{background:var(--ok-soft);color:var(--ok)}
+.feedback.bad{background:var(--bad-soft);color:var(--bad)}
+.feedback.info{background:var(--brand-soft);color:var(--ink)}
+.feedback b{color:inherit}
+.nav{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:22px}
+.btn{border:0;border-radius:12px;padding:12px 20px;font:inherit;font-weight:600;cursor:pointer;background:var(--brand);color:var(--brand-ink)}
+.btn[disabled]{opacity:.45;cursor:not-allowed}
+.btn.ghost{background:transparent;color:var(--ink-2);border:1px solid var(--line)}
+.btn.big{font-size:18px;padding:14px 26px}
+.pill{display:inline-block;font-size:12px;font-weight:600;padding:2px 8px;border-radius:99px;background:var(--surface-2);color:var(--ink-2)}
+.hero{display:grid;grid-template-columns:1.1fr .9fr;gap:24px;align-items:center}
+@media (max-width:720px){.hero{grid-template-columns:1fr}}
+.illus{width:100%;height:auto}
+.term{border-bottom:2px dashed var(--brand);cursor:pointer;color:var(--brand);font-weight:600;background:none;border-top:0;border-left:0;border-right:0;font:inherit;padding:0}
+.doc{border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.doc-head{background:var(--surface-2);padding:10px 14px;font-size:14px;color:var(--muted);display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.hot{display:flex;gap:10px;align-items:flex-start;width:100%;text-align:left;padding:12px 14px;border:0;border-top:1px solid var(--line);background:var(--surface);color:var(--ink);font:inherit;cursor:pointer}
+.hot:hover{background:var(--brand-soft)}
+.hot .chk{flex:0 0 22px;height:22px;border-radius:6px;border:2px solid var(--line);display:grid;place-items:center;margin-top:2px;color:var(--ok)}
+.hot.seen .chk{border-color:var(--ok);background:var(--ok-soft)}
+.hot .why{display:none;font-size:14px;color:var(--ink-2);margin-top:4px}
+.hot.seen .why{display:block}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{border:1.5px solid var(--line);background:var(--surface);color:var(--ink);border-radius:99px;padding:7px 12px;font:inherit;font-size:14px;cursor:pointer}
+.chip[aria-pressed="true"]{border-color:var(--brand);background:var(--brand-soft);color:var(--brand)}
+.console{background:var(--code-bg);color:var(--code-ink);border-radius:12px;padding:14px 16px;font-size:14px;overflow:auto;line-height:1.6}
+.console .c{color:#8aa0bf}
+.console .m{color:#ffb86b;font-weight:700}
+.console .u{color:#9fd3ff;word-break:break-all}
+.console .h{color:#c3e88d}
+pre.json{margin:0;white-space:pre-wrap;word-break:break-word}
+.jk{color:var(--k)}.js{color:var(--s)}.jn{color:var(--n)}.jp{color:var(--p)}
+button.jk{background:none;border:0;padding:0 2px;border-radius:4px;font:inherit;cursor:pointer;color:var(--k);text-decoration:underline dotted}
+button.jk:hover,button.jk:focus-visible{background:rgba(124,196,255,.18)}
+button.jk.hit{background:rgba(95,211,148,.25);color:#7ff0b0}
+button.jk.miss{background:rgba(255,138,128,.22);color:#ffb3ab}
+.flow{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:16px 0}
+@media (max-width:720px){.flow{grid-template-columns:1fr 1fr}}
+.fstep{border:1.5px solid var(--line);border-radius:12px;padding:12px;opacity:.35;transition:opacity .35s,border-color .35s,transform .35s;transform:translateY(6px)}
+.fstep.on{opacity:1;border-color:var(--brand);transform:none}
+.fstep .n{width:28px;height:28px;border-radius:50%;background:var(--brand);color:var(--brand-ink);display:grid;place-items:center;font-weight:700;margin-bottom:6px}
+.status{display:flex;gap:14px;align-items:center;border-radius:12px;padding:14px 16px;margin-bottom:14px}
+.status .code{font-size:34px;font-weight:800;font-family:ui-monospace,Menlo,Consolas,monospace}
+.status.s2{background:var(--ok-soft);color:var(--ok)}
+.status.s4{background:var(--bad-soft);color:var(--bad)}
+table.mini{width:100%;border-collapse:collapse;font-size:14px}
+table.mini th,table.mini td{border-bottom:1px solid var(--line);padding:6px 8px;text-align:left}
+table.mini th{color:var(--muted);font-weight:600}
+table.mini td.mono{white-space:nowrap;font-size:12.5px}
+.pipeline{display:grid;grid-template-columns:.9fr auto 1.3fr auto 1fr;gap:10px;align-items:stretch}
+@media (max-width:720px){.pipeline{grid-template-columns:1fr}.pipeline .arrow{transform:rotate(90deg);justify-self:center}}
+.pipeline .box{border:1px solid var(--line);border-radius:12px;padding:12px;background:var(--surface)}
+.pipeline .arrow{align-self:center;color:var(--brand);font-size:24px}
+.badge{width:140px;height:140px;margin:0 auto 12px;display:block}
+.summary li{margin-bottom:6px;color:var(--ink-2)}
+.summary .okk{color:var(--ok);font-weight:700}
+.summary .bad{color:var(--bad);font-weight:700}
+.drawer{position:fixed;inset:0;background:rgba(10,16,28,.45);display:none;align-items:flex-end;justify-content:center;z-index:20}
+.drawer.open{display:flex}
+.drawer .sheet{background:var(--surface);color:var(--ink);width:min(720px,100%);max-height:80vh;overflow:auto;border-radius:16px 16px 0 0;padding:22px}
+.drawer dt{font-weight:700;margin-top:10px}
+.drawer dd{margin:2px 0 0;color:var(--ink-2)}
+.fade{animation:fade .35s ease}
+@keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.packet{animation:move 1.2s ease-in-out infinite}
+@keyframes move{0%{transform:translateX(0)}50%{transform:translateX(150px)}100%{transform:translateX(0)}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+footer{margin-top:18px;font-size:12px;color:var(--muted);text-align:center}
+:focus-visible{outline:3px solid var(--brand);outline-offset:2px}
+#stage:focus{outline:none}
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="top">
+    <div class="course">CICO2000 · Análisis de Datos y Visualización · Semana 4 · Apartado 2.2</div>
+    <div class="tools">
+      <button class="icon-btn" id="btnGlos" aria-haspopup="dialog">📖 Glosario</button>
+      <button class="icon-btn" id="btnTheme" aria-label="Cambiar tema claro u oscuro">◐ Tema</button>
+    </div>
+  </header>
+  <div class="progress" aria-hidden="true"><div class="bar"><span id="barFill"></span></div><small id="barTxt"></small></div>
+  <nav class="steps" id="steps" aria-label="Etapas de la misión"></nav>
+  <main id="stage" class="card" tabindex="-1" aria-live="polite"></main>
+  <footer>Recurso interactivo elaborado para la asignatura Análisis de Datos y Visualización (CICO2000). La API usada en la simulación es ficticia y sus datos son de ejemplo.</footer>
+</div>
+
+<div class="drawer" id="glos" role="dialog" aria-modal="true" aria-labelledby="glosT">
+  <div class="sheet">
+    <div style="display:flex;justify-content:space-between;align-items:center"><h2 id="glosT" style="margin:0">Glosario rápido</h2><button class="icon-btn" id="glosClose">Cerrar ✕</button></div>
+    <dl>
+      <dt>API</dt><dd>Interfaz que permite que dos sistemas de software se comuniquen e intercambien datos o funcionalidades bajo reglas definidas.</dd>
+      <dt>API REST</dt><dd>API que usa los métodos estándar de HTTP para operar sobre recursos; suele responder en JSON.</dd>
+      <dt>Recurso</dt><dd>Elemento que ofrece la API: dispositivos, usuarios, mediciones, etc.</dd>
+      <dt>Endpoint</dt><dd>URL específica del recurso al que se envía la solicitud.</dd>
+      <dt>Métodos HTTP</dt><dd>GET obtiene información; POST crea; PUT actualiza; DELETE elimina.</dd>
+      <dt>Parámetros</dt><dd>Valores que filtran o acotan la consulta, por ejemplo <span class="mono">ciudad=Loja</span> o <span class="mono">limite=5</span>.</dd>
+      <dt>API key</dt><dd>Clave única que identifica a quien consume la API; permite identificación, control de uso y seguridad.</dd>
+      <dt>Código de estado</dt><dd>Número que indica el resultado: 200 éxito, 201 creado, 400 solicitud incorrecta, 401 no autorizado, 404 no encontrado.</dd>
+      <dt>JSON</dt><dd>Formato de texto con pares clave–valor y listas; es la respuesta más común de las APIs REST.</dd>
+    </dl>
+  </div>
+</div>
+
+<script>
+/* ================= Configuración ================= */
+const PRACTICA_URL = "#";   // ← Reemplazar por el enlace al notebook práctico de la semana (p. ej., en Canvas o Colab)
+const BASE = "https://api.monitoreo-red.example";
+
+/* ================= Iconos (SVG inline) ================= */
+const I = {
+  file:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>',
+  web:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15 15 0 0 1 0 20M12 2a15 15 0 0 0 0 20"/></svg>',
+  api:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 9l-3 3 3 3M16 9l3 3-3 3M13 7l-2 10"/></svg>',
+  db:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v14c0 1.7 3.6 3 8 3s8-1.3 8-3V5M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3"/></svg>',
+  lock:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>',
+  key:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="7.5" cy="15.5" r="4.5"/><path d="M11 12l9-9M16 7l3 3"/></svg>',
+  eye:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8S1 12 1 12z"/><circle cx="12" cy="12" r="3"/></svg>',
+  share:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/></svg>',
+  check:'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg>'
+};
+
+/* ================= Estado ================= */
+const S = {
+  i:0, fuente:null, endpoint:null, metodo:null, params:new Set(["ciudad=Loja","limite=5"]), auth:null, jsonKey:null,
+  primerIntento:{}, intentosEnvio:0, docsVistos:new Set(), flujo:0, respuesta:null
+};
+function marcarPrimerIntento(k, ok){ if(!(k in S.primerIntento)) S.primerIntento[k]=ok; }
+
+/* ================= Etapas para la barra ================= */
+const ETAPAS = ["Inicio","Fuente","Concepto","Documentación","Endpoint","Método","Parámetros","Autenticación","Flujo","Solicitud","Respuesta","Análisis","Cierre"];
+
+/* ================= Escenas ================= */
+const scenes = [
+ /* 0 Portada */
+ {etapa:0, render:()=>`
+  <div class="hero fade">
+   <div>
+    <p class="kicker">Recurso interactivo · Semana 4</p>
+    <h1>Misión API</h1>
+    <p class="lead">Este recurso está diseñado para que usted comprenda cómo trabaja una API y cómo se usa dentro de un flujo analítico.</p>
+    <p>Duración estimada: 10–15 minutos. Tomará 6 decisiones y verá, en una consola simulada, qué responde el servidor.</p>
+    <button class="btn big" data-next>Iniciar simulación ▸</button>
+   </div>
+   ${svgPortada()}
+  </div>`},
+ /* 1 Bienvenida */
+ {etapa:0, render:()=>`
+  <div class="hero fade">
+   <div>
+    <p class="kicker">Antes de empezar</p>
+    <h2>No necesita dominar todos los detalles técnicos de una API</h2>
+    <p class="lead">En esta simulación aprenderá a:</p>
+    <ol>
+      <li>identificar la fuente de datos,</li>
+      <li>revisar la documentación,</li>
+      <li>reconocer el endpoint,</li>
+      <li>usar el método GET,</li>
+      <li>autenticarse de forma responsable, e</li>
+      <li>interpretar la respuesta.</li>
+    </ol>
+    <p>Si se equivoca, no pasa nada: la simulación le mostrará qué ocurrió y cómo corregirlo.</p>
+   </div>
+   ${svgAnalista()}
+  </div>${nav({back:true,next:"Comenzar"})}`},
+ /* 2 Escenario */
+ {etapa:0, render:()=>`
+  <div class="fade">
+   <p class="kicker">Situación de partida</p>
+   <h2>Usted es analista de datos en un equipo de operaciones de red</h2>
+   <p class="lead">Necesita analizar el estado y la <b>latencia</b> de los dispositivos de red de la ciudad de <b>Loja</b>. Esos datos no están en un archivo local: los ofrece un <b>servicio web de monitoreo</b> que responde a consultas bajo ciertas reglas.</p>
+   <div class="feedback info show">🎯 <b>Objetivo de la misión:</b> obtener la lista de dispositivos de Loja con su latencia y dejarla lista para el análisis.</div>
+  </div>${nav({back:true})}`},
+ /* 3 Decisión 1: fuente */
+ {etapa:1, key:"fuente", render:()=>decision({
+   kicker:"Primera decisión", titulo:"¿Cuál es la mejor estrategia de extracción?",
+   texto:"Los datos están en un servicio web que responde bajo reglas de consulta. ¿Qué estrategia es la más adecuada?",
+   opciones:[
+    {id:"csv", ico:I.file, t:"Leer un archivo CSV local", s:"pd.read_csv()", fb:"No hay un archivo local: los datos viven en un servicio externo. La lectura de archivos se usa cuando ya dispone del CSV o JSON."},
+    {id:"scraping", ico:I.web, t:"Web scraping", s:"Extraer datos del HTML de una página", fb:"El scraping extrae datos de páginas pensadas para personas. Si el servicio ofrece reglas de consulta, lo adecuado es usarlas."},
+    {id:"api", ico:I.api, t:"Consultar una API", s:"Solicitud–respuesta bajo reglas definidas", ok:true, fb:"¡Correcto! Una API permite recuperar datos de forma automatizada y controlada, siguiendo las reglas del proveedor."},
+    {id:"sql", ico:I.db, t:"Consulta SQL a una base relacional", s:"SELECT … FROM …", fb:"SQL se usa cuando tiene acceso directo a una base de datos relacional. Aquí el acceso es a través de un servicio web."}
+   ], cols:"g2", obligatoria:true
+ })},
+ /* 4 Qué es una API + REST */
+ {etapa:2, render:()=>`
+  <div class="fade">
+   <p class="kicker">Concepto clave</p>
+   <h2>¿Qué es una API?</h2>
+   <p class="lead">Una API es una interfaz que permite que dos sistemas de software se comuniquen e intercambien datos o funcionalidades.</p>
+   ${svgClienteServidor()}
+   <p>Una aplicación (el <b>cliente</b>) <b>solicita</b> información y otra (el <b>servidor</b>) la <b>entrega</b> bajo reglas definidas. El cliente no necesita conocer los detalles internos del servidor.</p>
+   <p>En este recurso trabajaremos con una API <button class="term" id="termRest" aria-expanded="false" aria-controls="restCard">REST</button>. <span class="pill">Pulse la palabra</span></p>
+   <div id="restCard" class="feedback info">🧩 <b>API REST:</b> usa los métodos estándar de HTTP (GET, POST, PUT, DELETE) para operar sobre <b>recursos</b>, y suele devolver datos en <b>JSON</b>. Es de las más comunes y se integra con facilidad en Python mediante la librería <span class="mono">requests</span>.</div>
+  </div>${nav({back:true})}`,
+  after:()=>{ const b=$("#termRest"), c=$("#restCard"); b.onclick=()=>{c.classList.toggle("show"); b.setAttribute("aria-expanded", c.classList.contains("show"));}; }},
+ /* 5 Documentación */
+ {etapa:3, render:()=>{
+   const items=[
+    ["endpoint","Endpoint", `URL del recurso. Ej.: <span class="mono">${BASE}/v1/dispositivos</span>`, "Sin el endpoint correcto la solicitud no llega al recurso que necesita (error 404)."],
+    ["limites","Límites de uso", "60 solicitudes por minuto por clave.", "Superarlos puede bloquear temporalmente su acceso. Planifique cuántas consultas necesita."],
+    ["auth","Autenticación", "Requiere API key en el encabezado <span class='mono'>X-API-Key</span>.", "Sin credencial el servidor rechaza la solicitud (error 401). La clave identifica a quien consume los datos."],
+    ["params","Parámetros, filtrado y paginación", "<span class='mono'>ciudad</span>, <span class='mono'>estado</span>, <span class='mono'>limite</span> (entero, 1–100), <span class='mono'>pagina</span>.", "Permiten pedir solo lo necesario. Un parámetro con formato incorrecto provoca un error 400."],
+    ["formato","Formato de respuesta", "JSON con <span class='mono'>total</span>, <span class='mono'>pagina</span> y la lista <span class='mono'>datos</span>.", "Saber la estructura de antemano le permite localizar rápido el dato que busca."]
+   ];
+   return `<div class="fade">
+    <p class="kicker">Pausa pedagógica</p>
+    <h2>Antes de usar una API, revise su documentación</h2>
+    <p>Pulse cada elemento de la documentación para descubrir por qué es importante. Debe revisar los cinco para continuar.</p>
+    <div class="doc">
+     <div class="doc-head"><span>📘 API de Monitoreo de Red · Documentación v1</span><span class="pill">API ficticia de práctica</span></div>
+     ${items.map(([id,t,d,w])=>`<button class="hot ${S.docsVistos.has(id)?'seen':''}" data-doc="${id}" aria-expanded="${S.docsVistos.has(id)}">
+        <span class="chk">${S.docsVistos.has(id)?I.check:''}</span>
+        <span><b>${t}</b><br><span style="color:var(--muted);font-size:14px">${d}</span><span class="why">💡 ${w}</span></span></button>`).join("")}
+    </div>
+    <p style="margin-top:10px"><small id="docCount" style="color:var(--muted)">${S.docsVistos.size} de 5 revisados</small></p>
+   </div>${nav({back:true, next:"Continuar", disabled:S.docsVistos.size<5, id:"docNext"})}`;},
+  after:()=>{ $$("[data-doc]").forEach(b=>b.onclick=()=>{ S.docsVistos.add(b.dataset.doc); b.classList.add("seen"); b.setAttribute("aria-expanded","true"); b.querySelector(".chk").innerHTML=I.check; $("#docCount").textContent=`${S.docsVistos.size} de 5 revisados`; if(S.docsVistos.size>=5) $("#docNext").disabled=false; }); }},
+ /* 6 Decisión 2: endpoint */
+ {etapa:4, key:"endpoint", render:()=>decision({
+   kicker:"Segunda decisión", titulo:"Elija el endpoint",
+   texto:"Desea consultar datos de <b>dispositivos</b> de red. ¿Cuál es el endpoint correcto según la documentación?",
+   opciones:[
+    {id:"usuarios", ico:I.api, t:`${BASE}/v1/usuarios`, s:"Recurso: usuarios", mono:true, fb:"Endpoint registrado. Recuerde: cada recurso tiene su propia dirección."},
+    {id:"dispositivos", ico:I.api, t:`${BASE}/v1/dispositivos`, s:"Recurso: dispositivos", mono:true, ok:true, fb:"Endpoint registrado. Recuerde: cada recurso tiene su propia dirección."},
+    {id:"docs", ico:I.api, t:`${BASE}/docs/dispositivos`, s:"Página de documentación", mono:true, fb:"Endpoint registrado. Recuerde: cada recurso tiene su propia dirección."}
+   ], cols:"", registro:true
+ })},
+ /* 7 Decisión 3: método */
+ {etapa:5, key:"metodo", render:()=>decision({
+   kicker:"Tercera decisión", titulo:"Elija el método HTTP",
+   texto:"Su objetivo es <b>recuperar</b> información, no crearla ni modificarla. ¿Qué método debe usar?",
+   opciones:[
+    {id:"GET", ico:"<b>GET</b>", t:"GET", s:"Obtener información", ok:true, fb:"Método registrado: <b>GET</b> solicita y recupera información sin modificar el servidor."},
+    {id:"POST", ico:"<b>POST</b>", t:"POST", s:"Crear un recurso", fb:"Método registrado: <b>POST</b> se usa para <b>crear</b> recursos nuevos en el servidor."},
+    {id:"PUT", ico:"<b>PUT</b>", t:"PUT", s:"Actualizar un recurso", fb:"Método registrado: <b>PUT</b> se usa para <b>actualizar</b> un recurso existente."},
+    {id:"DELETE", ico:"<b>DEL</b>", t:"DELETE", s:"Eliminar un recurso", fb:"Método registrado: <b>DELETE</b> se usa para <b>eliminar</b> un recurso."}
+   ], cols:"g4", registro:true
+ })},
+ /* 8 Decisión 4: parámetros */
+ {etapa:6, render:()=>{
+   const chips=[["ciudad=Loja","Solo dispositivos de Loja"],["estado=activo","Solo dispositivos activos"],["limite=5","Máximo 5 resultados"],["limite=cinco","Máximo «cinco» resultados"]];
+   return `<div class="fade">
+    <p class="kicker">Cuarta decisión</p>
+    <h2>Ajuste la consulta con parámetros</h2>
+    <p>Los parámetros filtran o acotan la información. Active o desactive los filtros y observe cómo cambia la URL.</p>
+    <div class="chips" role="group" aria-label="Parámetros de la consulta">
+     ${chips.map(([c,d])=>`<button class="chip mono" data-chip="${c}" aria-pressed="${S.params.has(c)}" title="${d}">${c}</button>`).join("")}
+    </div>
+    <p style="margin-top:8px;font-size:14px;color:var(--muted)">Recuerde lo que dice la documentación sobre el tipo de dato de <span class="mono">limite</span>.</p>
+    <div class="console mono" style="margin-top:12px"><span class="c"># Vista previa de la solicitud</span><br><span class="m">${S.metodo||"GET"}</span> <span class="u" id="urlPrev">${urlActual()}</span></div>
+   </div>${nav({back:true})}`;},
+  after:()=>{ $$("[data-chip]").forEach(b=>b.onclick=()=>{ const c=b.dataset.chip; if(S.params.has(c)) S.params.delete(c); else { if(c.startsWith("limite=")) [...S.params].filter(x=>x.startsWith("limite=")).forEach(x=>S.params.delete(x)); S.params.add(c);} $$("[data-chip]").forEach(x=>x.setAttribute("aria-pressed",S.params.has(x.dataset.chip))); $("#urlPrev").textContent=urlActual(); }); }},
+ /* 9 Decisión 5: autenticación */
+ {etapa:7, key:"auth", render:()=>decision({
+   kicker:"Quinta decisión", titulo:"Autenticación",
+   texto:"La documentación indica que la API requiere una <b>API key</b>. ¿Qué debe hacer?",
+   opciones:[
+    {id:"incluir", ico:I.key, t:"Incluir mi API key en el encabezado X-API-Key", s:"Como indica la documentación", ok:true, fb:"Decisión registrada. La API key identifica a quien consume los datos y permite al proveedor controlar el uso."},
+    {id:"omitir", ico:I.lock, t:"Enviar la solicitud sin credenciales", s:"Probar suerte", fb:"Decisión registrada. Veremos qué responde el servidor."},
+    {id:"publicar", ico:I.share, t:"Escribir la clave en el notebook y compartirlo con el curso", s:"Para que todos la usen", fb:"Decisión registrada. Piense: ¿quién sería responsable del uso que otros hagan de su clave?"},
+    {id:"prestada", ico:I.eye, t:"Usar la API key de un compañero", s:"Para ahorrar el registro", fb:"Decisión registrada. Piense: ¿a nombre de quién quedan registradas las consultas?"}
+   ], cols:"g2", registro:true
+ })},
+ /* 10 Flujo REST */
+ {etapa:8, render:()=>{
+   const pasos=[["El cliente envía la solicitud","Método, endpoint, parámetros y encabezados."],["El servidor la valida o autentica","Revisa la API key y el formato."],["El servidor procesa el requerimiento","Busca y filtra los datos solicitados."],["Devuelve una respuesta o un error","Código de estado, encabezados y cuerpo (JSON)."]];
+   return `<div class="fade">
+    <p class="kicker">Escena central</p>
+    <h2>¿Cómo funciona una API REST?</h2>
+    <p>Pulse <b>Siguiente paso</b> para recorrer el flujo.</p>
+    <div class="flow">${pasos.map((p,k)=>`<div class="fstep ${k<S.flujo?'on':''}" id="fs${k}"><div class="n">${k+1}</div><b>${p[0]}</b><div style="font-size:14px;color:var(--muted)">${p[1]}</div></div>`).join("")}</div>
+    <button class="btn ghost" id="btnFlujo" ${S.flujo>=4?"disabled":""}>Siguiente paso ▸</button>
+   </div>${nav({back:true, next:"Continuar", disabled:S.flujo<4, id:"flowNext"})}`;},
+  after:()=>{ $("#btnFlujo").onclick=()=>{ if(S.flujo<4){ $("#fs"+S.flujo).classList.add("on"); S.flujo++; } if(S.flujo>=4){ $("#btnFlujo").disabled=true; $("#flowNext").disabled=false; } }; }},
+ /* 11 Enviar solicitud */
+ {etapa:9, render:()=>`
+  <div class="fade">
+   <p class="kicker">Momento de la verdad</p>
+   <h2>Ahora envíe la solicitud</h2>
+   <p>Esta es la solicitud que construyó con sus decisiones:</p>
+   <div class="console mono">
+    <span class="m">${S.metodo}</span> <span class="u">${urlActual()}</span><br>
+    ${S.auth==="omitir" ? '<span class="c"># (sin encabezado de autenticación)</span>' : '<span class="h">X-API-Key:</span> '+(S.auth==="prestada"?'clave-de-otra-persona':'••••••••••••3f9a')}<br>
+    <span class="h">Accept:</span> application/json
+   </div>
+   <div id="sending" style="display:none;margin-top:14px">${svgEnvio()}</div>
+   <div style="margin-top:16px"><button class="btn big" id="btnSend">📡 Enviar solicitud</button></div>
+   ${S.intentosEnvio?`<p style="margin-top:10px;font-size:14px;color:var(--muted)">Intentos de envío: ${S.intentosEnvio}</p>`:""}
+  </div>${nav({back:true, next:false})}`,
+  after:()=>{ $("#btnSend").onclick=()=>{ $("#btnSend").disabled=true; $("#sending").style.display="block"; S.intentosEnvio++; setTimeout(()=>{ S.respuesta=evaluar(); go(12); }, matchMedia("(prefers-reduced-motion: reduce)").matches?100:1400); }; }},
+ /* 12 Respuesta (200 o error) */
+ {etapa:10, render:()=>{
+   const r=S.respuesta||evaluar();
+   if(r.code!==200) return `<div class="fade">
+     <p class="kicker">Interpretación de la respuesta</p>
+     <div class="status s4"><span class="code">${r.code}</span><div><b>${r.nombre}</b><br>${r.significado}</div></div>
+     <div class="console mono"><span class="c"># Cuerpo de la respuesta</span><br><pre class="json">${jsonHTML(r.body)}</pre></div>
+     <div class="feedback bad show" style="margin-top:14px">🔎 <b>Pista:</b> ${r.pista}</div>
+     <p style="margin-top:12px;font-size:14px">Referencia rápida: <b>200</b> solicitud exitosa · <b>400</b> solicitud incorrecta · <b>401</b> no autorizado · <b>404</b> recurso no encontrado · <b>405</b> método no permitido.</p>
+    </div><div class="nav"><span></span><button class="btn" id="btnFix">Corregir la decisión ↺</button></div>`;
+   return `<div class="fade">
+     <p class="kicker">Interpretación de la respuesta</p>
+     <div class="status s2"><span class="code">200</span><div><b>OK · Solicitud exitosa</b><br>El servidor validó la solicitud y devolvió los datos.</div></div>
+     <p>Una respuesta tiene tres elementos: <b>código de estado</b>, <b>encabezados</b> (metadatos) y <b>cuerpo</b> (los datos). Observe el cuerpo: <span class="jk">claves</span>, <span class="js">textos</span>, <span class="jn">números</span> y listas <span class="jp">[ ]</span>.</p>
+     <div class="console mono"><span class="h">Content-Type:</span> application/json · <span class="h">X-RateLimit-Remaining:</span> 59<br><br><pre class="json">${jsonHTML(r.body)}</pre></div>
+    </div>${nav({back:false})}`;},
+  after:()=>{ const f=$("#btnFix"); if(f) f.onclick=()=>go(S.respuesta.volverA); }},
+ /* 13 Decisión 6: localizar dato en JSON */
+ {etapa:10, key:"jsonKey", render:()=>{
+   const body=respuestaOK();
+   return `<div class="fade">
+    <p class="kicker">Sexta decisión</p>
+    <h2>Localice la información útil</h2>
+    <p>Para su análisis necesita la <b>latencia de cada dispositivo</b>. Haga clic en la <b>clave</b> del JSON que contiene ese dato.</p>
+    <div class="console mono"><pre class="json">${jsonHTML(body,true)}</pre></div>
+    <div id="fb6" class="feedback" role="status"></div>
+   </div>${nav({back:true, next:"Continuar", disabled:S.jsonKey!=="latencia_ms", id:"jsonNext"})}`;},
+  after:()=>{ $$("button.jk").forEach(b=>b.onclick=()=>{ const k=b.dataset.key; const ok=k==="latencia_ms"; marcarPrimerIntento("jsonKey",ok); const fb=$("#fb6");
+     const msg={ "latencia_ms":"¡Correcto! <b>latencia_ms</b> aparece dentro de cada objeto de la lista <b>datos</b>: hay un valor por dispositivo.",
+       "datos":"Casi: <b>datos</b> es la lista que contiene los dispositivos. Busque, dentro de cada elemento, la clave específica de la latencia.",
+       "total":"<b>total</b> indica cuántos registros devolvió la consulta, no la latencia.",
+       "pagina":"<b>pagina</b> es información de paginación, útil si hay muchos resultados.",
+       "estado":"<b>estado</b> describe si el dispositivo está activo o no; no es la latencia.",
+       "id":"<b>id</b> identifica al dispositivo; le servirá para unir datos, pero no es la latencia.",
+       "nombre":"<b>nombre</b> es una etiqueta descriptiva del dispositivo.",
+       "tipo":"<b>tipo</b> indica si es router, switch o punto de acceso.",
+       "ciudad":"<b>ciudad</b> es la ubicación del dispositivo." }[k] || "Esa clave no contiene la latencia.";
+     $$("button.jk").forEach(x=>x.classList.remove("hit","miss")); $$(`button.jk[data-key="${k}"]`).forEach(x=>x.classList.add(ok?"hit":"miss"));
+     fb.className="feedback show "+(ok?"ok":"bad"); fb.innerHTML=msg; if(ok){ S.jsonKey=k; $("#jsonNext").disabled=false; } }); }},
+ /* 14 De la respuesta al análisis */
+ {etapa:11, render:()=>{
+   const d=respuestaOK().datos, max=Math.max(...d.map(x=>x.latencia_ms));
+   return `<div class="fade">
+    <p class="kicker">De la respuesta al análisis</p>
+    <h2>Consultar una API no es el final</h2>
+    <p>Después debe <b>interpretar</b>, <b>organizar</b> y <b>procesar</b> los datos recuperados. El JSON se convierte en una tabla y la tabla alimenta el análisis.</p>
+    <div class="pipeline">
+      <div class="box"><span class="pill">1 · Dato recuperado</span><div class="console mono" style="margin-top:8px;font-size:12px">{"id": "RT-LOJ-01",<br>&nbsp;"latencia_ms": 18.4, …}</div></div>
+      <div class="arrow" aria-hidden="true">➜</div>
+      <div class="box"><span class="pill">2 · Tabla (DataFrame)</span>
+        <table class="mini" style="margin-top:8px"><thead><tr><th>id</th><th>estado</th><th>latencia_ms</th></tr></thead>
+        <tbody>${d.map(x=>`<tr><td class="mono">${x.id}</td><td>${x.estado}</td><td>${x.latencia_ms}</td></tr>`).join("")}</tbody></table></div>
+      <div class="arrow" aria-hidden="true">➜</div>
+      <div class="box"><span class="pill">3 · Información útil</span>
+        <svg viewBox="0 0 245 ${d.length*26+8}" width="100%" role="img" aria-label="Latencia por dispositivo">
+          ${d.map((x,k)=>`<text x="0" y="${k*26+18}" font-size="11" fill="currentColor" style="color:var(--muted)">${x.id}</text>
+          <rect x="78" y="${k*26+6}" rx="4" height="16" width="${Math.max(4,(x.latencia_ms/max)*120)}" fill="${x.latencia_ms>40?'var(--bad)':'var(--brand)'}"/>
+          <text x="${82+(x.latencia_ms/max)*120}" y="${k*26+18}" font-size="11" fill="currentColor" style="color:var(--ink-2)">${x.latencia_ms}</text>`).join("")}
+        </svg>
+        <div style="font-size:13px;color:var(--muted)">Un dispositivo supera los 40 ms y otro reporta 0 ms estando inactivo: ¿dato real o faltante? Esa pregunta es parte del análisis.</div></div>
+    </div>
+   </div>${nav({back:true})}`;}},
+ /* 15 Paso siguiente */
+ {etapa:11, render:()=>`
+  <div class="fade">
+   <p class="kicker">Paso siguiente</p>
+   <h2>De la simulación a la práctica</h2>
+   <p class="lead">Después de comprender esta lógica, estará listo para trabajar con el <b>notebook práctico de la semana</b>.</p>
+   <div class="grid g2">
+     <div class="opt" style="cursor:default"><span class="ico">${I.api}</span><span><b>requests</b><span class="sub">Librería de Python para enviar solicitudes HTTP y recibir la respuesta.</span></span></div>
+     <div class="opt" style="cursor:default"><span class="ico">${I.db}</span><span><b>pandas</b><span class="sub">Para convertir la respuesta JSON en un DataFrame y analizarla.</span></span></div>
+   </div>
+   <div class="feedback info show" style="margin-top:14px">✅ En el notebook repetirá las mismas decisiones de esta misión: endpoint, método GET, parámetros, autenticación e interpretación del código de estado y del JSON.</div>
+  </div>${nav({back:true, next:"Ver resultado"})}`},
+ /* 16 Final */
+ {etapa:12, render:()=>{
+   const items=[["fuente","Elegir la API como estrategia de extracción"],["endpoint","Elegir el endpoint del recurso"],["metodo","Usar el método GET"],["params","Enviar parámetros con formato válido"],["auth","Autenticarse con su propia API key"],["jsonKey","Localizar el dato en el JSON"]];
+   const aciertos=items.filter(([k])=>S.primerIntento[k]).length;
+   const nivel = aciertos===6?"Oro":aciertos>=4?"Plata":"Bronce";
+   return `<div class="fade" style="text-align:center">
+    ${svgInsignia(nivel)}
+    <p class="kicker">Misión completada · Insignia ${nivel}</p>
+    <h2>Ahora reconoce el papel de una API en la extracción de datos</h2>
+    <p class="lead">Identificar la fuente, revisar la documentación, elegir el endpoint, usar GET, autenticarse e interpretar la respuesta.</p>
+    <p><b>${aciertos} de 6</b> decisiones correctas al primer intento · Envíos de la solicitud: <b>${S.intentosEnvio}</b></p>
+    <ul class="summary" style="text-align:left;max-width:520px;margin:12px auto 18px">
+     ${items.map(([k,t])=>`<li>${S.primerIntento[k]?'<span class="okk">✔</span>':'<span class="bad">↺</span>'} ${t}</li>`).join("")}
+    </ul>
+    <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
+      <button class="btn ghost" id="btnRetry">↺ Reintentar</button>
+      <a class="btn" id="btnPractica" href="${PRACTICA_URL}" target="_blank" rel="noopener" style="text-decoration:none">Ir a la práctica ▸</a>
+    </div>
+   </div>`;},
+  after:()=>{ $("#btnRetry").onclick=reiniciar; }}
+];
+
+/* ================= Lógica de evaluación ================= */
+function urlActual(){
+  const ep = {usuarios:"/v1/usuarios", dispositivos:"/v1/dispositivos", docs:"/docs/dispositivos"}[S.endpoint||"dispositivos"];
+  const q=[...S.params]; return BASE+ep+(q.length?"?"+q.join("&"):"");
+}
+function datosLoja(){
+  const all=[
+    {id:"RT-LOJ-01",nombre:"Router Core Loja",tipo:"router",ciudad:"Loja",estado:"activo",latencia_ms:18.4},
+    {id:"SW-LOJ-07",nombre:"Switch Campus Norte",tipo:"switch",ciudad:"Loja",estado:"activo",latencia_ms:9.8},
+    {id:"AP-LOJ-12",nombre:"Punto de acceso Biblioteca",tipo:"access_point",ciudad:"Loja",estado:"activo",latencia_ms:42.7},
+    {id:"RT-LOJ-03",nombre:"Router Borde Sur",tipo:"router",ciudad:"Loja",estado:"inactivo",latencia_ms:0},
+    {id:"SW-LOJ-15",nombre:"Switch Laboratorios",tipo:"switch",ciudad:"Loja",estado:"activo",latencia_ms:12.1},
+    {id:"AP-LOJ-20",nombre:"Punto de acceso Auditorio",tipo:"access_point",ciudad:"Loja",estado:"activo",latencia_ms:27.5}
+  ];
+  let d=all; if(S.params.has("estado=activo")) d=d.filter(x=>x.estado==="activo");
+  if(S.params.has("limite=5")) d=d.slice(0,5);
+  return d;
+}
+function respuestaOK(){ const d=datosLoja(); return {total:d.length, pagina:1, datos:d.map(({id,nombre,tipo,estado,latencia_ms})=>({id,nombre,tipo,estado,latencia_ms}))}; }
+function evaluar(){
+  marcarPrimerIntento("endpoint", S.endpoint==="dispositivos");
+  marcarPrimerIntento("metodo", S.metodo==="GET");
+  marcarPrimerIntento("params", !S.params.has("limite=cinco"));
+  marcarPrimerIntento("auth", S.auth==="incluir");
+  if(S.endpoint!=="dispositivos") return {code:404, nombre:"Not Found · Recurso no encontrado", significado:"El servidor no encontró un recurso en esa dirección.", volverA:6,
+     body:{error:"not_found", mensaje:`No existe el recurso solicitado en ${S.endpoint==="docs"?"/docs/dispositivos (es una página de documentación, no un endpoint de datos)":"/v1/usuarios para esta consulta de dispositivos"}`},
+     pista:"Revise el <b>endpoint</b>: la URL debe apuntar al recurso que necesita (dispositivos) según la documentación."};
+  if(S.metodo!=="GET") return {code:405, nombre:"Method Not Allowed · Método no permitido", significado:`Este endpoint no admite ${S.metodo} con su tipo de acceso.`, volverA:7,
+     body:{error:"method_not_allowed", permitido:["GET"]},
+     pista:`Usted quiere <b>recuperar</b> datos. ${S.metodo} sirve para ${ {POST:"crear",PUT:"actualizar",DELETE:"eliminar"}[S.metodo] } recursos. Revise el <b>método HTTP</b>.`};
+  if(S.auth!=="incluir") return {code:401, nombre:"Unauthorized · No autorizado", significado:"La solicitud no tiene una credencial válida para quien consulta.", volverA:9,
+     body:{error:"unauthorized", mensaje: S.auth==="omitir"?"Falta el encabezado X-API-Key":"La API key no es válida para esta cuenta o fue revocada"},
+     pista: S.auth==="omitir" ? "La documentación exige una <b>API key</b>. Inclúyala en el encabezado indicado."
+       : S.auth==="publicar" ? "Una clave publicada se considera comprometida: el proveedor puede <b>revocarla</b>. Cada persona es responsable de su clave y no debe compartirla ni publicarla."
+       : "La clave de otra persona la identifica a ella, no a usted: el uso quedaría a su nombre y puede ser bloqueado. Use <b>su propia</b> API key.",
+     };
+  if(S.params.has("limite=cinco")) return {code:400, nombre:"Bad Request · Solicitud incorrecta", significado:"Un parámetro no tiene el formato esperado.", volverA:8,
+     body:{error:"bad_request", mensaje:"El parámetro 'limite' debe ser un número entero entre 1 y 100", recibido:"cinco"},
+     pista:"Revise los <b>parámetros</b>: la documentación indica que <span class='mono'>limite</span> es un número entero (por ejemplo, 5)."};
+  return {code:200, body:respuestaOK()};
+}
+
+/* ================= Render JSON ================= */
+function jsonHTML(obj, clickable=false, ind=0){
+  const sp=n=>"  ".repeat(n), esc=s=>String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;");
+  const key=k=> clickable?`<button class="jk" data-key="${esc(k)}">"${esc(k)}"</button>`:`<span class="jk">"${esc(k)}"</span>`;
+  const val=v=> Array.isArray(v) ? (v.length && typeof v[0]!=="object" ? `<span class="jp">[</span>${v.map(x=>typeof x==="number"?`<span class="jn">${x}</span>`:`<span class="js">"${esc(x)}"</span>`).join(", ")}<span class="jp">]</span>`
+      : `<span class="jp">[</span>\n${v.map(x=>sp(ind+2)+jsonHTML(x,clickable,ind+2)).join(",\n")}\n${sp(ind+1)}<span class="jp">]</span>`)
+    : typeof v==="object" && v!==null ? jsonHTML(v,clickable,ind+1)
+    : typeof v==="number" ? `<span class="jn">${v}</span>` : `<span class="js">"${esc(v)}"</span>`;
+  const ents=Object.entries(obj);
+  return `<span class="jp">{</span>\n${ents.map(([k,v])=>`${sp(ind+1)}${key(k)}<span class="jp">:</span> ${val(v)}`).join(",\n")}\n${sp(ind)}<span class="jp">}</span>`;
+}
+
+/* ================= Plantilla de decisión ================= */
+const CFG={};
+function decision(cfg){
+  const {kicker,titulo,texto,opciones,cols,obligatoria,registro}=cfg;
+  const k=scenes[S.i].key, sel=S[k]; CFG[k]=cfg;
+  return `<div class="fade">
+   <p class="kicker">${kicker}</p><h2>${titulo}</h2><p class="lead">${texto}</p>
+   <div class="grid ${cols}" role="group" aria-label="${titulo}">
+    ${opciones.map(o=>`<button class="opt ${obligatoria&&sel===o.id?(o.ok?'correct':''):''}" data-opt="${o.id}" aria-pressed="${sel===o.id}">
+      <span class="ico">${o.ico}</span><span><b class="${o.mono?'mono':''}" style="${o.mono?'font-size:14px;word-break:break-all':''}">${o.t}</b><span class="sub">${o.s}</span></span></button>`).join("")}
+   </div>
+   <div class="feedback" id="fbDec" role="status"></div>
+   ${registro?'<p style="margin-top:10px;font-size:14px;color:var(--muted)">ℹ️ Su decisión se registrará y la verá reflejada cuando envíe la solicitud. Puede cambiarla antes de continuar.</p>':''}
+  </div>${nav({back:true, next:"Continuar", disabled:obligatoria? sel!==opciones.find(o=>o.ok).id : !sel, id:"decNext"})}`;
+}
+/* ================= Navegación ================= */
+const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+function nav({back=true,next="Continuar",disabled=false,id="navNext"}={}){
+  return `<div class="nav">${back?'<button class="btn ghost" data-back>◂ Atrás</button>':'<span></span>'}${next?`<button class="btn" data-next id="${id}" ${disabled?"disabled":""}>${next} ▸</button>`:''}</div>`;
+}
+function go(i){ S.i=Math.max(0,Math.min(scenes.length-1,i)); render(); }
+function render(){
+  const sc=scenes[S.i], st=$("#stage");
+  st.innerHTML=sc.render();
+  // barra de progreso
+  const pct=Math.round(S.i/(scenes.length-1)*100); $("#barFill").style.width=pct+"%"; $("#barTxt").textContent=pct+" %";
+  $("#steps").innerHTML=ETAPAS.map((e,k)=>`<span class="step ${k<sc.etapa?'done':k===sc.etapa?'now':''}">${e}</span>`).join("");
+  // decisiones
+  if(sc.key && sc.key!=="jsonKey"){
+    const opciones=CFG[sc.key].opciones;
+    $$("[data-opt]").forEach(b=>b.onclick=()=>{
+      const o=opciones.find(x=>x.id===b.dataset.opt), fb=$("#fbDec");
+      if(sc.key==="fuente") marcarPrimerIntento("fuente", !!o.ok);
+      S[sc.key]=o.id;
+      $$("[data-opt]").forEach(x=>{x.setAttribute("aria-pressed", x===b); x.classList.remove("correct","wrong");});
+      if(sc.key==="fuente"){ b.classList.add(o.ok?"correct":"wrong"); fb.className="feedback show "+(o.ok?"ok":"bad"); $("#decNext").disabled=!o.ok; }
+      else { fb.className="feedback show info"; $("#decNext").disabled=false; }
+      fb.innerHTML=o.fb;
+    });
+  }
+  $$("[data-next]").forEach(b=>b.addEventListener("click",()=>{ if(!b.disabled) go(S.i+1); }));
+  $$("[data-back]").forEach(b=>b.onclick=()=>go(S.i-1));
+  if(sc.after) sc.after();
+  st.focus({preventScroll:true}); window.scrollTo({top:0,behavior:"smooth"});
+}
+function reiniciar(){
+  Object.assign(S,{i:0,fuente:null,endpoint:null,metodo:null,params:new Set(["ciudad=Loja","limite=5"]),auth:null,jsonKey:null,primerIntento:{},intentosEnvio:0,docsVistos:new Set(),flujo:0,respuesta:null});
+  render();
+}
+
+/* ================= Ilustraciones SVG ================= */
+function svgPortada(){return `<svg class="illus" viewBox="0 0 360 260" role="img" aria-label="Cliente y servidor intercambiando datos JSON de forma segura">
+ <rect x="10" y="60" width="120" height="90" rx="10" fill="var(--surface-2)" stroke="var(--line)"/><rect x="10" y="60" width="120" height="18" rx="10" fill="var(--brand)"/>
+ <circle cx="22" cy="69" r="3" fill="#fff"/><circle cx="32" cy="69" r="3" fill="#fff"/><text x="70" y="120" text-anchor="middle" font-size="13" fill="var(--ink-2)">Cliente</text>
+ <rect x="235" y="45" width="110" height="120" rx="10" fill="var(--surface-2)" stroke="var(--line)"/>
+ <rect x="250" y="62" width="80" height="18" rx="4" fill="var(--brand-soft)"/><rect x="250" y="88" width="80" height="18" rx="4" fill="var(--brand-soft)"/><rect x="250" y="114" width="80" height="18" rx="4" fill="var(--brand-soft)"/>
+ <circle cx="320" cy="71" r="3" fill="var(--ok)"/><circle cx="320" cy="97" r="3" fill="var(--ok)"/><circle cx="320" cy="123" r="3" fill="var(--ok)"/>
+ <text x="290" y="155" text-anchor="middle" font-size="13" fill="var(--ink-2)">Servidor</text>
+ <path d="M140 90 C 180 60, 200 60, 228 80" fill="none" stroke="var(--brand)" stroke-width="2.5" stroke-dasharray="6 5"/><polygon points="228,80 218,74 220,86" fill="var(--brand)"/>
+ <path d="M228 130 C 200 155, 175 155, 140 125" fill="none" stroke="var(--ok)" stroke-width="2.5" stroke-dasharray="6 5"/><polygon points="140,125 150,122 146,134" fill="var(--ok)"/>
+ <text x="184" y="58" text-anchor="middle" font-size="12" font-weight="700" fill="var(--brand)">GET</text>
+ <g transform="translate(150,170)"><rect width="70" height="44" rx="8" fill="var(--code-bg)"/><text x="35" y="28" text-anchor="middle" font-size="16" font-family="monospace" fill="#7cc4ff">{ }</text></g>
+ <text x="185" y="232" text-anchor="middle" font-size="11" fill="var(--muted)">JSON</text>
+ <g transform="translate(274,175)"><rect x="0" y="12" width="26" height="20" rx="4" fill="var(--warn-soft)" stroke="var(--warn)"/><path d="M5 12 V8 a8 8 0 0 1 16 0 V12" fill="none" stroke="var(--warn)" stroke-width="2.5"/></g>
+</svg>`;}
+function svgAnalista(){return `<svg class="illus" viewBox="0 0 300 240" role="img" aria-label="Analista trabajando frente a su computadora">
+ <rect x="40" y="150" width="220" height="10" rx="4" fill="var(--line)"/>
+ <rect x="120" y="70" width="130" height="80" rx="8" fill="var(--surface-2)" stroke="var(--line)"/>
+ <polyline points="132,130 152,112 170,120 190,96 212,104 236,84" fill="none" stroke="var(--brand)" stroke-width="3"/>
+ <rect x="175" y="150" width="20" height="10" fill="var(--line)"/>
+ <circle cx="80" cy="78" r="22" fill="#f1c7a3"/><path d="M58 76 a22 22 0 0 1 44 -6 q-14 -10 -44 6z" fill="#3b2a20"/>
+ <path d="M48 150 q0 -48 32 -48 q32 0 32 48z" fill="var(--brand)"/>
+ <rect x="96" y="122" width="40" height="8" rx="4" fill="#f1c7a3" transform="rotate(-12 96 122)"/>
+ <g transform="translate(212,20)"><circle r="16" cx="16" cy="16" fill="var(--ok-soft)"/><path d="M8 16 l6 6 l11 -12" stroke="var(--ok)" stroke-width="3" fill="none"/></g>
+</svg>`;}
+function svgClienteServidor(){return `<svg viewBox="0 0 640 150" width="100%" role="img" aria-label="Diagrama: el cliente envía una solicitud al servidor, que devuelve una respuesta">
+ <rect x="10" y="40" width="140" height="70" rx="10" fill="var(--surface-2)" stroke="var(--line)"/><text x="80" y="72" text-anchor="middle" font-size="15" font-weight="700" fill="var(--ink)">Cliente</text><text x="80" y="92" text-anchor="middle" font-size="12" fill="var(--muted)">su notebook</text>
+ <rect x="250" y="30" width="140" height="90" rx="10" fill="var(--brand-soft)" stroke="var(--brand)"/><text x="320" y="70" text-anchor="middle" font-size="15" font-weight="700" fill="var(--brand)">API</text><text x="320" y="90" text-anchor="middle" font-size="12" fill="var(--ink-2)">reglas de acceso</text>
+ <rect x="490" y="40" width="140" height="70" rx="10" fill="var(--surface-2)" stroke="var(--line)"/><text x="560" y="72" text-anchor="middle" font-size="15" font-weight="700" fill="var(--ink)">Servidor</text><text x="560" y="92" text-anchor="middle" font-size="12" fill="var(--muted)">datos del servicio</text>
+ <line x1="155" y1="62" x2="245" y2="62" stroke="var(--brand)" stroke-width="2.5"/><polygon points="245,62 235,57 235,67" fill="var(--brand)"/><text x="200" y="54" text-anchor="middle" font-size="11" fill="var(--brand)">solicitud</text>
+ <line x1="395" y1="62" x2="485" y2="62" stroke="var(--brand)" stroke-width="2.5"/><polygon points="485,62 475,57 475,67" fill="var(--brand)"/>
+ <line x1="485" y1="92" x2="395" y2="92" stroke="var(--ok)" stroke-width="2.5"/><polygon points="395,92 405,87 405,97" fill="var(--ok)"/>
+ <line x1="245" y1="92" x2="155" y2="92" stroke="var(--ok)" stroke-width="2.5"/><polygon points="155,92 165,87 165,97" fill="var(--ok)"/><text x="200" y="110" text-anchor="middle" font-size="11" fill="var(--ok)">respuesta</text>
+</svg>`;}
+function svgEnvio(){return `<svg viewBox="0 0 260 50" width="260" role="img" aria-label="Enviando la solicitud">
+ <rect x="0" y="12" width="40" height="26" rx="6" fill="var(--surface-2)" stroke="var(--line)"/><rect x="220" y="8" width="40" height="34" rx="6" fill="var(--surface-2)" stroke="var(--line)"/>
+ <line x1="45" y1="25" x2="215" y2="25" stroke="var(--line)" stroke-dasharray="4 4"/>
+ <g class="packet"><rect x="48" y="17" width="22" height="16" rx="4" fill="var(--brand)"/></g></svg><span style="font-size:14px;color:var(--muted)"> Enviando y esperando respuesta del servidor…</span>`;}
+function svgInsignia(n){const c={Oro:"#d4a017",Plata:"#9aa7b8",Bronce:"#b87333"}[n];return `<svg class="badge" viewBox="0 0 140 140" role="img" aria-label="Insignia ${n}">
+ <circle cx="70" cy="62" r="50" fill="${c}"/><circle cx="70" cy="62" r="40" fill="none" stroke="#fff" stroke-width="3" opacity=".7"/>
+ <path d="M50 100 L40 136 L70 122 L100 136 L90 100" fill="${c}" opacity=".85"/>
+ <text x="70" y="60" text-anchor="middle" font-size="22" font-weight="800" fill="#fff" font-family="monospace">API</text>
+ <path d="M52 72 l12 10 l24 -22" stroke="#fff" stroke-width="5" fill="none" stroke-linecap="round"/></svg>`;}
+
+/* ================= Inicialización ================= */
+render();
+document.getElementById('btnGlos').onclick=()=>{document.getElementById('glos').classList.add('open');document.getElementById('glosClose').focus();};
+document.getElementById('glosClose').onclick=()=>{document.getElementById('glos').classList.remove('open');document.getElementById('btnGlos').focus();};
+document.getElementById('glos').addEventListener('click',e=>{if(e.target.id==='glos'){e.currentTarget.classList.remove('open');}});
+document.addEventListener('keydown',e=>{if(e.key==='Escape')document.getElementById('glos').classList.remove('open');});
+document.getElementById('btnTheme').onclick=()=>{const r=document.documentElement;const dark=r.dataset.theme?r.dataset.theme==='dark':matchMedia('(prefers-color-scheme: dark)').matches;r.dataset.theme=dark?'light':'dark';};
+</script>
+</body>
+</html>
