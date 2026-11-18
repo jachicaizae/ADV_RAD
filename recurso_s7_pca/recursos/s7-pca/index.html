@@ -1,0 +1,852 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Explorador PCA</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="description" content="Simulación interactiva para comprender el Análisis de Componentes Principales (PCA): componentes, varianza explicada, cargas y proyección. CICO2000 · UTPL.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700&family=Source+Sans+3:wght@400;600;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: consola de monitoreo de dos columnas (explicación | instrumento), una etapa a la vez, con barra de progreso */
+:root{
+  --bg:#f2f5fa; --surface:#ffffff; --surface2:#eaf0f9; --ink:#13203a; --ink2:#46536b; --muted:#6b7690; --line:#d6dcea;
+  --brand:#1f5fbf; --brand-soft:#e2ebfb; --pc2:#c76f12; --pc2-soft:#fbeedd;
+  --ok:#23804f; --ok-soft:#e1f3e9; --bad:#b9372f; --bad-soft:#fbe5e3;
+  --g-normal:#6f7fa3; --g-congestion:#c8433a; --g-descarga:#16907f;
+  --f-display:"Sora","Segoe UI",system-ui,sans-serif; --f-body:"Source Sans 3","Segoe UI",system-ui,sans-serif; --f-mono:"JetBrains Mono",ui-monospace,Consolas,monospace;
+  --r:12px;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0d1420; --surface:#152033; --surface2:#1b2a42; --ink:#e7edf7; --ink2:#b6c2d7; --muted:#8e9bb3; --line:#2a3b57;
+  --brand:#6aa5ff; --brand-soft:#1c3257; --pc2:#f2a65a; --pc2-soft:#3b2a17;
+  --ok:#4fc58b; --ok-soft:#173828; --bad:#ff7a70; --bad-soft:#3d1f1d;
+  --g-normal:#9eadcc; --g-congestion:#ff7a70; --g-descarga:#3fcdb9; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0d1420; --surface:#152033; --surface2:#1b2a42; --ink:#e7edf7; --ink2:#b6c2d7; --muted:#8e9bb3; --line:#2a3b57;
+  --brand:#6aa5ff; --brand-soft:#1c3257; --pc2:#f2a65a; --pc2-soft:#3b2a17;
+  --ok:#4fc58b; --ok-soft:#173828; --bad:#ff7a70; --bad-soft:#3d1f1d;
+  --g-normal:#9eadcc; --g-congestion:#ff7a70; --g-descarga:#3fcdb9; color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:17px/1.55 var(--f-body)}
+.wrap{max-width:1120px;margin:0 auto;padding-block:20px 48px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+h1,h2,h3{font-family:var(--f-display);text-wrap:balance;margin:0;line-height:1.2}
+h1{font-size:clamp(26px,4vw,36px);letter-spacing:-.01em}
+h2{font-size:clamp(21px,2.6vw,26px)}
+h3{font-size:17px}
+p{margin:0}
+.mono{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.eyebrow{font:600 12px/1 var(--f-body);letter-spacing:.1em;text-transform:uppercase;color:var(--brand)}
+header.top{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px}
+.top .brand{display:flex;flex-direction:column;gap:4px}
+.top small{color:var(--muted);font-size:14px}
+.tools{display:flex;gap:8px;flex-wrap:wrap}
+button,.btn{font:600 15px/1 var(--f-body);border-radius:10px;border:1px solid var(--line);background:var(--surface);color:var(--ink);padding:10px 14px;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:8px;transition:background .15s,border-color .15s}
+button:hover:not(:disabled),.btn:hover{border-color:var(--brand)}
+button:focus-visible,.btn:focus-visible,input:focus-visible{outline:3px solid var(--brand);outline-offset:2px}
+button:disabled{opacity:.45;cursor:not-allowed}
+.primary{background:var(--brand);border-color:var(--brand);color:#fff}
+:root[data-theme="dark"] .primary{color:#0d1420}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .primary{color:#0d1420}}
+.progress{height:6px;background:var(--line);border-radius:99px;overflow:hidden}
+.progress>i{display:block;height:100%;background:var(--brand);width:0;transition:width .3s}
+.stages{display:flex;gap:6px;flex-wrap:wrap;margin:10px 0 18px;padding:0;list-style:none}
+.stages li{font-size:13px;padding:5px 10px;border-radius:99px;border:1px solid var(--line);color:var(--muted);background:var(--surface)}
+.stages li.done{color:var(--ok);border-color:var(--ok)}
+.stages li.now{color:var(--brand);border-color:var(--brand);background:var(--brand-soft);font-weight:700}
+main.stage{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:clamp(16px,3vw,28px)}
+.grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.15fr);gap:28px;align-items:start}
+@media (max-width:860px){.grid{grid-template-columns:minmax(0,1fr)} .col.vis{order:-1}}
+.col{display:flex;flex-direction:column;gap:14px;min-width:0}
+.lead{font-size:18px;color:var(--ink2);max-width:62ch}
+.text{color:var(--ink2);max-width:62ch}
+.text b,.lead b{color:var(--ink)}
+.instr{display:flex;flex-direction:column;gap:12px}
+.panel{background:var(--surface2);border-radius:var(--r);padding:14px 16px;display:flex;flex-direction:column;gap:10px}
+.canvas-box{position:relative;width:100%;aspect-ratio:1/1;max-width:100%;background:var(--surface2);border-radius:var(--r);overflow:hidden;touch-action:none}
+.canvas-box.wide{aspect-ratio:16/11}
+canvas{display:block;width:100%;height:100%}
+.legend{display:flex;flex-wrap:wrap;gap:14px;font-size:14px;color:var(--ink2)}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.dot{width:11px;height:11px;border-radius:50%;display:inline-block}
+.meter{display:flex;flex-direction:column;gap:6px}
+.meter .bar{height:14px;border-radius:7px;background:var(--line);overflow:hidden}
+.meter .bar i{display:block;height:100%;background:var(--brand);transition:width .15s}
+.big{font:700 clamp(28px,4vw,38px)/1 var(--f-mono);font-variant-numeric:tabular-nums}
+.row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+input[type=range]{width:100%;accent-color:var(--brand)}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.seg button{border:0;border-radius:0;background:transparent}
+.seg button[aria-pressed=true]{background:var(--brand);color:#fff}
+.q{display:flex;flex-direction:column;gap:8px}
+.q .stem{font-weight:700;color:var(--ink)}
+.opts{display:flex;flex-direction:column;gap:8px}
+.opts button{justify-content:flex-start;text-align:left;line-height:1.35;padding:11px 14px;font-weight:600;white-space:normal}
+.opts.inline{flex-direction:row;flex-wrap:wrap}
+.opts button.correct:disabled{opacity:1}
+.opts button.correct{border-color:var(--ok);background:var(--ok-soft);color:var(--ink)}
+.opts button.wrong{border-color:var(--bad);background:var(--bad-soft);color:var(--ink)}
+.fb{border-radius:10px;padding:10px 14px;font-size:15.5px}
+.fb.ok{background:var(--ok-soft);border-left:4px solid var(--ok)}
+.fb.bad{background:var(--bad-soft);border-left:4px solid var(--bad)}
+.fb.info{background:var(--brand-soft);border-left:4px solid var(--brand)}
+.formula{font-family:var(--f-mono);font-size:14.5px;background:var(--surface);border:1px dashed var(--line);border-radius:8px;padding:10px 12px;overflow-x:auto;white-space:nowrap}
+.nav{display:flex;justify-content:space-between;gap:10px;margin-top:22px;flex-wrap:wrap}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{font-size:14px;padding:6px 12px;border-radius:99px;background:var(--brand-soft);color:var(--brand);font-weight:700}
+.chip.pc2{background:var(--pc2-soft);color:var(--pc2)}
+table.vals{border-collapse:collapse;width:100%;font-size:14.5px}
+table.vals td{padding:5px 6px;border-bottom:1px solid var(--line)}
+table.vals td:last-child{text-align:right;font-family:var(--f-mono)}
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px}
+.card{border:1px solid var(--line);border-radius:var(--r);padding:14px;display:flex;flex-direction:column;gap:10px;background:var(--surface)}
+.steps{margin:0;padding-left:22px;display:flex;flex-direction:column;gap:6px;color:var(--ink2)}
+.medal{width:96px;height:96px;border-radius:50%;display:grid;place-items:center;font:700 15px var(--f-display);color:#1a1300}
+.medal.oro{background:radial-gradient(circle at 35% 30%,#ffe9a3,#e2ac22)}
+.medal.plata{background:radial-gradient(circle at 35% 30%,#f4f6f9,#a9b2bf)}
+.medal.bronce{background:radial-gradient(circle at 35% 30%,#f5c9a0,#b8733a)}
+.hero-net{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.hero-net span{background:var(--surface2);border-radius:8px;padding:10px;font-size:14px;color:var(--ink2);text-align:center}
+.arrow-down{font:700 22px var(--f-mono);color:var(--brand);text-align:center}
+details.gloss{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:10px 14px;margin-top:16px}
+details.gloss summary{cursor:pointer;font-weight:700}
+details.gloss dl{display:grid;grid-template-columns:minmax(120px,190px) minmax(0,1fr);gap:8px 14px;margin:12px 0 4px}
+details.gloss dt{font-weight:700}
+details.gloss dd{margin:0;color:var(--ink2)}
+@media (max-width:520px){details.gloss dl{grid-template-columns:minmax(0,1fr)} .hero-net{grid-template-columns:repeat(2,minmax(0,1fr))}}
+footer{margin-top:22px;font-size:13px;color:var(--muted)}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+@media (prefers-reduced-motion: reduce){*{transition:none!important;animation:none!important}}
+</style>
+
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="brand">
+      <span class="eyebrow">CICO2000 · Semana 7 · Apartado 2.9</span>
+      <h1>Explorador PCA</h1>
+      <small>Análisis de Componentes Principales explicado con métricas de una red ficticia</small>
+    </div>
+  </header>
+  <div class="progress" aria-hidden="true"><i id="progressBar"></i></div>
+  <ol class="stages" id="stageList" aria-label="Etapas del recurso"></ol>
+
+  <main class="stage" id="stage" aria-live="polite"></main>
+
+  <div class="nav">
+    <button id="btnPrev" type="button">← Anterior</button>
+    <button id="btnNext" type="button" class="primary">Siguiente →</button>
+  </div>
+
+  <details class="gloss">
+    <summary>Glosario</summary>
+    <dl>
+      <dt>Dimensión</dt><dd>Número de variables (columnas) de un dataset. Ocho métricas por evento = ocho dimensiones.</dd>
+      <dt>Varianza</dt><dd>Cuánto se dispersan los valores. En PCA se usa como medida de la «información» que contiene una dirección.</dd>
+      <dt>Estandarizar</dt><dd>Restar la media y dividir para la desviación estándar de cada variable (puntaje z). Así todas quedan en la misma escala.</dd>
+      <dt>Componente principal (CP)</dt><dd>Nueva variable formada como combinación lineal de las originales. PC1 captura la mayor varianza; PC2, la mayor varianza restante, perpendicular a PC1.</dd>
+      <dt>Varianza explicada</dt><dd>Porcentaje de la varianza total que conserva cada componente. La acumulada indica cuánta información se conserva con las primeras k componentes.</dd>
+      <dt>Carga (loading)</dt><dd>Peso de una variable original en una componente. Con datos estandarizados se interpreta como su correlación con la componente (entre −1 y 1).</dd>
+      <dt>Proyección</dt><dd>Representación de cada observación con las nuevas coordenadas (PC1, PC2…). Permite ver el dataset en 2D.</dd>
+    </dl>
+  </details>
+
+  <footer>Ing. Janneth Chicaiza Espinosa · Análisis de Datos y Visualización (CICO2000), UTPL. Los datos de la simulación son ficticios y se generan en su navegador con fines educativos.</footer>
+</div>
+
+<script>
+/* ===== Núcleo numérico: datos ficticios y PCA (sin librerías) ===== */
+function mulberry32(a) {
+  return function () {
+    a |= 0; a = (a + 0x6D2B79F5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+function makeNormal(rng) {
+  return function (mu = 0, sd = 1) {
+    let u = 0, v = 0;
+    while (u === 0) u = rng();
+    while (v === 0) v = rng();
+    return mu + sd * Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+  };
+}
+const mean = a => a.reduce((s, x) => s + x, 0) / a.length;
+const sd = a => { const m = mean(a); return Math.sqrt(a.reduce((s, x) => s + (x - m) ** 2, 0) / (a.length - 1)); };
+const zscore = a => { const m = mean(a), s = sd(a); return a.map(x => (x - m) / s); };
+
+/* Matriz de covarianza de columnas (array de columnas) */
+function covMatrix(cols) {
+  const p = cols.length, n = cols[0].length, ms = cols.map(mean);
+  const C = Array.from({ length: p }, () => Array(p).fill(0));
+  for (let i = 0; i < p; i++) for (let j = i; j < p; j++) {
+    let s = 0;
+    for (let k = 0; k < n; k++) s += (cols[i][k] - ms[i]) * (cols[j][k] - ms[j]);
+    C[i][j] = C[j][i] = s / (n - 1);
+  }
+  return C;
+}
+
+/* Valores y vectores propios de una matriz simétrica (método de Jacobi) */
+function jacobiEigen(A) {
+  const n = A.length, a = A.map(r => r.slice());
+  const V = Array.from({ length: n }, (_, i) => Array.from({ length: n }, (_, j) => (i === j ? 1 : 0)));
+  for (let sweep = 0; sweep < 100; sweep++) {
+    let off = 0;
+    for (let i = 0; i < n; i++) for (let j = i + 1; j < n; j++) off += a[i][j] ** 2;
+    if (off < 1e-14) break;
+    for (let p = 0; p < n; p++) for (let q = p + 1; q < n; q++) {
+      if (Math.abs(a[p][q]) < 1e-15) continue;
+      const theta = (a[q][q] - a[p][p]) / (2 * a[p][q]);
+      const t = Math.sign(theta || 1) / (Math.abs(theta) + Math.sqrt(theta * theta + 1));
+      const c = 1 / Math.sqrt(t * t + 1), s = t * c;
+      for (let k = 0; k < n; k++) {
+        const akp = a[k][p], akq = a[k][q];
+        a[k][p] = c * akp - s * akq; a[k][q] = s * akp + c * akq;
+      }
+      for (let k = 0; k < n; k++) {
+        const apk = a[p][k], aqk = a[q][k];
+        a[p][k] = c * apk - s * aqk; a[q][k] = s * apk + c * aqk;
+      }
+      for (let k = 0; k < n; k++) {
+        const vkp = V[k][p], vkq = V[k][q];
+        V[k][p] = c * vkp - s * vkq; V[k][q] = s * vkp + c * vkq;
+      }
+    }
+  }
+  const vals = a.map((r, i) => r[i]);
+  const order = vals.map((v, i) => i).sort((i, j) => vals[j] - vals[i]);
+  return { values: order.map(i => vals[i]), vectors: order.map(i => V.map(r => r[i])) };
+}
+
+/* PCA completo sobre columnas (ya estandarizadas o no) */
+function pca(cols) {
+  const C = covMatrix(cols);
+  const { values, vectors } = jacobiEigen(C);
+  const total = values.reduce((s, v) => s + v, 0);
+  const ms = cols.map(mean), n = cols[0].length;
+  const scores = vectors.map(vec => {
+    const out = new Array(n);
+    for (let k = 0; k < n; k++) { let s = 0; for (let j = 0; j < cols.length; j++) s += vec[j] * (cols[j][k] - ms[j]); out[k] = s; }
+    return out;
+  });
+  return { values, vectors, ratio: values.map(v => v / total), scores };
+}
+
+/* ---------- Dataset 1: latencia vs jitter (2 variables correlacionadas) ---------- */
+function datasetDos(seed = 7) {
+  const N = makeNormal(mulberry32(seed));
+  const lat = [], jit = [];
+  for (let i = 0; i < 110; i++) {
+    const f = N();
+    lat.push(35 + 12 * (f + N(0, 0.38)));
+    jit.push(6 + 2.2 * (f + N(0, 0.38)));
+  }
+  return { lat, jit, zl: zscore(lat), zj: zscore(jit) };
+}
+
+/* ---------- Dataset 2: latencia (ms) vs bytes (KB): escalas muy distintas ---------- */
+function datasetEscala(seed = 11) {
+  const N = makeNormal(mulberry32(seed));
+  const lat = [], kb = [];
+  for (let i = 0; i < 110; i++) {
+    const f = N();
+    lat.push(40 + 10 * (0.8 * f + 0.6 * N()));
+    kb.push(1500 + 550 * (0.8 * f + 0.6 * N()));
+  }
+  return { lat, kb };
+}
+
+/* ---------- Dataset 3: 8 métricas de red por evento (ficticio) ---------- */
+const VARS = [
+  { id: "latencia", corto: "Lat.", nombre: "Latencia", unidad: "ms" },
+  { id: "jitter", corto: "Jitter", nombre: "Jitter", unidad: "ms" },
+  { id: "perdida", corto: "Pérd.", nombre: "Pérdida de paquetes", unidad: "%" },
+  { id: "respuesta", corto: "T. resp.", nombre: "Tiempo de respuesta", unidad: "ms" },
+  { id: "cpu", corto: "CPU", nombre: "Uso de CPU", unidad: "%" },
+  { id: "bytes", corto: "Bytes", nombre: "Bytes transmitidos", unidad: "MB" },
+  { id: "conexiones", corto: "Conex.", nombre: "Conexiones", unidad: "" },
+  { id: "memoria", corto: "Mem.", nombre: "Uso de memoria", unidad: "%" },
+];
+const GRUPOS = [
+  { id: "normal", nombre: "Operación normal", n: 90, f1: -0.55, f2: -0.35 },
+  { id: "congestion", nombre: "Congestión", n: 34, f1: 1.8, f2: -0.5 },
+  { id: "descarga", nombre: "Descarga masiva", n: 26, f1: -0.3, f2: 2.0 },
+];
+function datasetRed(seed = 2026) {
+  const N = makeNormal(mulberry32(seed));
+  const rows = [];
+  GRUPOS.forEach(g => {
+    for (let i = 0; i < g.n; i++) {
+      const f1 = N(g.f1, 0.55), f2 = N(g.f2, 0.55);
+      rows.push({
+        grupo: g.id,
+        latencia: 22 + 9 * f1 + N(0, 5),
+        jitter: 4 + 1.6 * f1 + N(0, 1.0),
+        perdida: Math.max(0, 0.6 + 0.35 * f1 + N(0, 0.22)),
+        respuesta: 140 + 45 * f1 + N(0, 26),
+        cpu: 45 + 7 * f1 + 5 * f2 + N(0, 5),
+        bytes: 320 + 120 * f2 + N(0, 60),
+        conexiones: Math.round(210 + 55 * f2 + N(0, 30)),
+        memoria: 55 + 7 * f2 + N(0, 4.5),
+      });
+    }
+  });
+  const cols = VARS.map(v => zscore(rows.map(r => r[v.id])));
+  const res = pca(cols);
+  // Convención de signos: PC1 positiva en latencia, PC2 positiva en bytes
+  const fix = (k, idx) => { if (res.vectors[k][idx] < 0) { res.vectors[k] = res.vectors[k].map(x => -x); res.scores[k] = res.scores[k].map(x => -x); } };
+  fix(0, 0); fix(1, 5);
+  // cargas = vector propio * raíz del valor propio (correlación variable-componente)
+  res.loadings = res.vectors.map((vec, k) => vec.map(x => x * Math.sqrt(res.values[k])));
+  return { rows, res };
+}
+
+if (typeof module !== "undefined") module.exports = { datasetDos, datasetEscala, datasetRed, pca, zscore, VARS, GRUPOS };
+
+/* ===== Configuración ===== */
+const PRACTICA_URL = "#";        // enlace al Notebook2.5_PCA.ipynb (Colab, Canvas o GitHub)
+const CATALOGO_URL = "../../";   // catálogo de recursos; deje "" para ocultar el enlace
+
+/* ===== Datos ===== */
+const D2 = datasetDos();
+const P2 = pca([D2.zl, D2.zj]);
+const DS = datasetEscala();
+const PS_RAW = pca([DS.lat, DS.kb]);
+const PS_STD = pca([zscore(DS.lat), zscore(DS.kb)]);
+const RED = datasetRed();
+const R = RED.res;
+const ACUM = R.ratio.reduce((a, v, i) => (a.push((a[i - 1] || 0) + v), a), []);
+const kPara = umbral => ACUM.findIndex(a => a >= umbral - 1e-9) + 1;
+const pct = (x, d = 1) => (x * 100).toFixed(d).replace(".", ",") + " %";
+const num = (x, d = 2) => x.toFixed(d).replace(".", ",");
+const corr = (a, b) => { const za = zscore(a), zb = zscore(b); return za.reduce((s, x, i) => s + x * zb[i], 0) / (a.length - 1); };
+
+/* ===== Estado ===== */
+const S = { etapa: 0, max: 0, aciertos: {}, intentos: {}, flags: {} };
+function registrar(id, correcto) {
+  if (!(id in S.intentos)) { S.intentos[id] = 0; }
+  S.intentos[id]++;
+  if (correcto && !(id in S.aciertos)) S.aciertos[id] = S.intentos[id] === 1;
+}
+
+/* ===== Utilidades de dibujo ===== */
+const css = name => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+function prepCanvas(canvas) {
+  const r = canvas.getBoundingClientRect(), dpr = window.devicePixelRatio || 1;
+  canvas.width = Math.max(1, Math.round(r.width * dpr)); canvas.height = Math.max(1, Math.round(r.height * dpr));
+  const ctx = canvas.getContext("2d"); ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  return { ctx, w: r.width, h: r.height };
+}
+function arrow(ctx, x0, y0, x1, y1, color, width = 3) {
+  const a = Math.atan2(y1 - y0, x1 - x0), L = 11;
+  ctx.strokeStyle = color; ctx.fillStyle = color; ctx.lineWidth = width;
+  ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(x1, y1);
+  ctx.lineTo(x1 - L * Math.cos(a - 0.4), y1 - L * Math.sin(a - 0.4));
+  ctx.lineTo(x1 - L * Math.cos(a + 0.4), y1 - L * Math.sin(a + 0.4)); ctx.closePath(); ctx.fill();
+}
+function label(ctx, text, x, y, color, align = "left", size = 13, weight = 600) {
+  ctx.fillStyle = color; ctx.font = `${weight} ${size}px ${css("--f-body") || "sans-serif"}`;
+  ctx.textAlign = align; ctx.textBaseline = "middle"; ctx.fillText(text, x, y);
+}
+let redraw = () => {};
+window.addEventListener("resize", () => redraw());
+const mq = window.matchMedia("(prefers-color-scheme: dark)");
+mq.addEventListener && mq.addEventListener("change", () => redraw());
+new MutationObserver(() => redraw()).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+
+/* ===== Preguntas con retroalimentación ===== */
+function pregunta(cont, id, stem, opciones, alAcertar, inline = false) {
+  const box = document.createElement("div"); box.className = "q";
+  box.innerHTML = `<div class="stem">${stem}</div><div class="opts${inline ? " inline" : ""}"></div><div class="fb-zone" aria-live="polite"></div>`;
+  const zone = box.querySelector(".opts"), fbz = box.querySelector(".fb-zone");
+  opciones.forEach(o => {
+    const b = document.createElement("button"); b.type = "button"; b.innerHTML = o.t;
+    if (S.aciertos[id] !== undefined && o.ok) b.classList.add("correct");
+    b.onclick = () => {
+      registrar(id, o.ok);
+      zone.querySelectorAll("button").forEach(x => x.classList.remove("wrong"));
+      b.classList.add(o.ok ? "correct" : "wrong");
+      fbz.innerHTML = `<div class="fb ${o.ok ? "ok" : "bad"}">${o.ok ? "✔ " : "✘ "}${o.fb}</div>`;
+      if (o.ok) { zone.querySelectorAll("button").forEach(x => (x.disabled = true)); alAcertar && alAcertar(); }
+    };
+    zone.appendChild(b);
+  });
+  if (S.aciertos[id] !== undefined) {
+    zone.querySelectorAll("button").forEach(x => (x.disabled = true));
+    const ok = opciones.find(o => o.ok); fbz.innerHTML = `<div class="fb ok">✔ ${ok.fb}</div>`;
+  }
+  cont.appendChild(box);
+  return box;
+}
+const resuelto = id => S.aciertos[id] !== undefined;
+
+/* ================= ETAPAS ================= */
+const ETAPAS = [
+/* ---------- 0. Inicio ---------- */
+{ nombre: "Inicio", listo: () => true, render(el) {
+  el.innerHTML = `
+  <div class="grid">
+    <div class="col">
+      <span class="eyebrow">El problema</span>
+      <h2>Ocho métricas por evento… ¿cómo verlas todas a la vez?</h2>
+      <p class="lead">Un sistema de monitoreo registra <b>150 eventos de red</b>. Para cada uno mide ocho variables. Un gráfico de dispersión solo muestra dos a la vez, y comparar los 28 pares posibles no revela el patrón general.</p>
+      <p class="text">El <b>Análisis de Componentes Principales (PCA)</b> construye pocas variables nuevas, las <b>componentes principales</b>, que resumen casi toda la información de las originales. Así un dataset de 8 dimensiones puede verse en 2.</p>
+      <div class="panel">
+        <h3>En este recurso explorará los cuatro focos de PCA</h3>
+        <div class="chips"><span class="chip">1 · Componentes principales</span><span class="chip">2 · Varianza explicada</span><span class="chip">3 · Cargas (loadings)</span><span class="chip">4 · Proyección</span></div>
+        <p class="text">Duración aproximada: 15 minutos. Las decisiones se puntúan al primer intento; al final obtendrá una insignia.</p>
+      </div>
+    </div>
+    <div class="col">
+      <div class="hero-net" aria-label="Variables del dataset">
+        ${VARS.map(v => `<span>${v.nombre}${v.unidad ? ` <span class="mono">(${v.unidad})</span>` : ""}</span>`).join("")}
+      </div>
+      <div class="arrow-down" aria-hidden="true">↓ PCA ↓</div>
+      <div class="hero-net" style="grid-template-columns:repeat(2,minmax(0,1fr))">
+        <span style="background:var(--brand-soft);color:var(--brand);font-weight:700">PC1</span>
+        <span style="background:var(--pc2-soft);color:var(--pc2);font-weight:700">PC2</span>
+      </div>
+      <p class="text" style="font-size:15px">Los datos son ficticios y se generan en su navegador. Simulan tres situaciones: operación normal, congestión y descarga masiva, pero PCA no conoce esas etiquetas.</p>
+    </div>
+  </div>`;
+}},
+
+/* ---------- 1. Componentes principales ---------- */
+{ nombre: "Componentes", listo: () => S.flags.pc1, render(el) {
+  const maxVar = P2.ratio[0];
+  el.innerHTML = `
+  <div class="grid">
+    <div class="col instr">
+      <span class="eyebrow">Foco 1 · Componentes principales</span>
+      <h2>Busque la dirección con más variación</h2>
+      <p class="text">Cada punto es un evento con su <b>latencia</b> y su <b>jitter</b> (estandarizados). Están muy correlacionados: cuando una sube, la otra también.</p>
+      <p class="text"><b>Gire el eje</b> con el control o arrastrando sobre el gráfico. Cada punto se proyecta (cae en perpendicular) sobre el eje. PCA busca el eje donde esas proyecciones quedan <b>lo más dispersas posible</b>.</p>
+      <label for="ang"><b>Ángulo del eje:</b> <span class="mono" id="angTxt"></span></label>
+      <input type="range" id="ang" min="0" max="179" step="1" value="150">
+      <div class="meter"><span>Varianza capturada por este eje</span><div class="row" style="justify-content:space-between"><span class="big" id="capt"></span><span class="text mono" id="captTxt"></span></div><div class="bar"><i id="captBar"></i></div></div>
+      <div id="msg1"></div>
+    </div>
+    <div class="col vis">
+      <div class="canvas-box"><canvas id="cv1" aria-label="Diagrama de dispersión de latencia y jitter con un eje giratorio"></canvas></div>
+      <div class="legend"><span><i class="dot" style="background:var(--g-normal)"></i>Eventos</span><span><i class="dot" style="background:var(--brand)"></i>Eje / PC1</span><span><i class="dot" style="background:var(--pc2)"></i>PC2</span></div>
+    </div>
+  </div>`;
+  const cv = el.querySelector("#cv1"), sl = el.querySelector("#ang"), msg = el.querySelector("#msg1");
+  if (S.flags.pc1) sl.value = 45;
+  const captura = deg => { const t = deg * Math.PI / 180, c = Math.cos(t), s = Math.sin(t); let v = 0; for (let i = 0; i < D2.zl.length; i++) v += (c * D2.zl[i] + s * D2.zj[i]) ** 2; return v / (D2.zl.length - 1) / 2; };
+  function mensaje() {
+    if (S.flags.pc1) {
+      msg.innerHTML = `<div class="fb ok">✔ Encontró <b>PC1</b>: la dirección de máxima varianza, a 45°, conserva el <b>${pct(P2.ratio[0])}</b> de la variación.</div>
+      <div class="panel"><p class="text"><b>PC1 es una nueva variable</b>, una combinación lineal de las originales:</p>
+      <div class="formula">PC1 = ${num(P2.vectors[0][0])} · latencia<sub>z</sub> + ${num(P2.vectors[0][1])} · jitter<sub>z</sub></div>
+      <p class="text"><b>PC2</b> es perpendicular a PC1 y recoge la variación restante (${pct(P2.ratio[1])}). Si descartamos PC2, pasamos de 2 variables a 1 y perdemos muy poca información.</p></div>`;
+    } else if (captura(+sl.value) >= maxVar - 0.004) {
+      msg.innerHTML = `<div class="fb info">¡Muy cerca del máximo posible! <button type="button" class="primary" id="rev">Mostrar PC1 y PC2</button></div>`;
+      msg.querySelector("#rev").onclick = () => { S.flags.pc1 = true; sl.value = 45; draw(); mensaje(); actualizarNav(); };
+    } else msg.innerHTML = `<div class="fb info">Siga girando: el máximo que puede capturar un solo eje es <b>${pct(maxVar)}</b>.</div>`;
+  }
+  function draw() {
+    const { ctx, w, h } = prepCanvas(cv), deg = +sl.value, t = deg * Math.PI / 180, c = Math.cos(t), s = Math.sin(t);
+    const sc = Math.min(w, h) / 7.2, X = x => w / 2 + x * sc, Y = y => h / 2 - y * sc;
+    ctx.clearRect(0, 0, w, h);
+    ctx.strokeStyle = css("--line"); ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(0, h / 2); ctx.lineTo(w, h / 2); ctx.moveTo(w / 2, 0); ctx.lineTo(w / 2, h); ctx.stroke();
+    label(ctx, "latencia (z) →", w - 8, h / 2 - 12, css("--muted"), "right", 12);
+    label(ctx, "↑ jitter (z)", w / 2 + 8, 14, css("--muted"), "left", 12);
+    const L = 4.2;
+    ctx.strokeStyle = css("--brand"); ctx.lineWidth = 2; ctx.globalAlpha = .9;
+    ctx.beginPath(); ctx.moveTo(X(-L * c), Y(-L * s)); ctx.lineTo(X(L * c), Y(L * s)); ctx.stroke(); ctx.globalAlpha = 1;
+    for (let i = 0; i < D2.zl.length; i++) {
+      const x = D2.zl[i], y = D2.zj[i], p = x * c + y * s;
+      ctx.strokeStyle = css("--muted"); ctx.globalAlpha = .25; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(X(x), Y(y)); ctx.lineTo(X(p * c), Y(p * s)); ctx.stroke(); ctx.globalAlpha = 1;
+      ctx.fillStyle = css("--brand"); ctx.fillRect(X(p * c) - 2, Y(p * s) - 2, 4, 4);
+      ctx.fillStyle = css("--g-normal"); ctx.beginPath(); ctx.arc(X(x), Y(y), 3.6, 0, 7); ctx.fill();
+    }
+    if (S.flags.pc1) {
+      const v1 = P2.vectors[0], v2 = P2.vectors[1], l1 = 2.2 * Math.sqrt(P2.values[0]), l2 = 2.2 * Math.sqrt(P2.values[1]);
+      arrow(ctx, X(0), Y(0), X(v1[0] * l1), Y(v1[1] * l1), css("--brand"), 4);
+      arrow(ctx, X(0), Y(0), X(-v2[0] * l2 * 1.6), Y(-v2[1] * l2 * 1.6), css("--pc2"), 4);
+      label(ctx, "PC1", X(v1[0] * l1) + 8, Y(v1[1] * l1) - 8, css("--brand"), "left", 15, 700);
+      label(ctx, "PC2", X(-v2[0] * l2 * 1.6) - 6, Y(-v2[1] * l2 * 1.6) - 10, css("--pc2"), "right", 15, 700);
+    }
+    const v = captura(deg);
+    el.querySelector("#angTxt").textContent = deg + "°";
+    el.querySelector("#capt").textContent = pct(v);
+    el.querySelector("#captTxt").textContent = "máximo posible: " + pct(maxVar);
+    el.querySelector("#captBar").style.width = (v / maxVar * 100) + "%";
+  }
+  sl.oninput = () => { draw(); mensaje(); };
+  let drag = false;
+  const setFromPointer = e => { const r = cv.getBoundingClientRect(); const dx = e.clientX - r.left - r.width / 2, dy = r.top + r.height / 2 - e.clientY; let d = Math.round(Math.atan2(dy, dx) * 180 / Math.PI); if (d < 0) d += 180; if (d >= 180) d -= 180; sl.value = d; draw(); mensaje(); };
+  cv.onpointerdown = e => { if (S.flags.pc1) return; drag = true; cv.setPointerCapture(e.pointerId); setFromPointer(e); };
+  cv.onpointermove = e => drag && setFromPointer(e);
+  cv.onpointerup = () => (drag = false);
+  redraw = draw; draw(); mensaje();
+}},
+
+/* ---------- 2. Escala ---------- */
+{ nombre: "Escala", listo: () => resuelto("escala"), render(el) {
+  const r = corr(DS.lat, DS.kb);
+  el.innerHTML = `
+  <div class="grid">
+    <div class="col instr">
+      <span class="eyebrow">Paso 2 del método · Estandarizar</span>
+      <h2>¿Qué pasa si las escalas son muy distintas?</h2>
+      <p class="text">Ahora las variables son <b>latencia</b> (decenas de ms) y <b>bytes transmitidos</b> (miles de KB). Su correlación es <span class="mono">r = ${num(r)}</span>. Compare el resultado de PCA con y sin estandarizar.</p>
+      <div class="seg" role="group" aria-label="Escala de los datos"><button type="button" id="mRaw" aria-pressed="true">Sin estandarizar</button><button type="button" id="mStd" aria-pressed="false">Estandarizado (z)</button></div>
+      <div class="panel" id="resEsc"></div>
+      <div id="q2"></div>
+    </div>
+    <div class="col vis">
+      <div class="canvas-box"><canvas id="cv2" aria-label="Datos de latencia y bytes con la dirección de PC1"></canvas></div>
+      <p class="text" style="font-size:14.5px">Ambos ejes se dibujan con la <b>misma escala</b>, como los «ve» PCA.</p>
+    </div>
+  </div>`;
+  const cv = el.querySelector("#cv2"); let modo = "raw";
+  const bR = el.querySelector("#mRaw"), bS = el.querySelector("#mStd");
+  bR.onclick = () => { modo = "raw"; bR.setAttribute("aria-pressed", "true"); bS.setAttribute("aria-pressed", "false"); draw(); };
+  bS.onclick = () => { modo = "std"; bS.setAttribute("aria-pressed", "true"); bR.setAttribute("aria-pressed", "false"); draw(); };
+  function draw() {
+    const P = modo === "raw" ? PS_RAW : PS_STD;
+    const xs = modo === "raw" ? DS.kb : zscore(DS.kb), ys = modo === "raw" ? DS.lat : zscore(DS.lat);
+    const { ctx, w, h } = prepCanvas(cv); ctx.clearRect(0, 0, w, h);
+    const mx = xs.reduce((a, b) => a + b) / xs.length, my = ys.reduce((a, b) => a + b) / ys.length;
+    const span = Math.max(...xs.map(x => Math.abs(x - mx)), ...ys.map(y => Math.abs(y - my))) * 1.15;
+    const sc = Math.min(w, h) / 2 / span, X = x => w / 2 + (x - mx) * sc, Y = y => h / 2 - (y - my) * sc;
+    ctx.strokeStyle = css("--line"); ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(0, h / 2); ctx.lineTo(w, h / 2); ctx.moveTo(w / 2, 0); ctx.lineTo(w / 2, h); ctx.stroke();
+    label(ctx, modo === "raw" ? "bytes (KB) →" : "bytes (z) →", w - 8, h / 2 - 12, css("--muted"), "right", 12);
+    label(ctx, modo === "raw" ? "↑ latencia (ms)" : "↑ latencia (z)", w / 2 + 8, 14, css("--muted"), "left", 12);
+    ctx.fillStyle = css("--g-descarga");
+    for (let i = 0; i < xs.length; i++) { ctx.beginPath(); ctx.arc(X(xs[i]), Y(ys[i]), 3.4, 0, 7); ctx.fill(); }
+    // vectores en orden (latencia, kb) -> dibujar en (kb, lat)
+    const v = P.vectors[0], L = span * 0.8, dx = v[1] * L * Math.sign(v[1] || 1), dy = v[0] * L * Math.sign(v[1] || 1);
+    arrow(ctx, X(mx), Y(my), X(mx + dx), Y(my + dy), css("--brand"), 4);
+    label(ctx, "PC1", X(mx + dx) - 6, Y(my + dy) - 14, css("--brand"), "right", 15, 700);
+    const s = Math.sign(v[1] || 1);
+    el.querySelector("#resEsc").innerHTML = `
+      <div class="row" style="justify-content:space-between"><span>Varianza explicada por PC1</span><span class="big">${pct(P.ratio[0])}</span></div>
+      <div class="formula">PC1 = ${num(v[0] * s, 3)} · latencia + ${num(v[1] * s, 3)} · bytes</div>
+      <p class="text">${modo === "raw"
+        ? "Sin estandarizar, PC1 es <b>casi idéntica a la columna de bytes</b>: la latencia casi no pesa. En la misma escala, la nube de puntos es una línea horizontal."
+        : "Estandarizadas, las dos variables pesan <b>lo mismo</b> y PC1 resume la información común de ambas."}</p>`;
+  }
+  pregunta(el.querySelector("#q2"), "escala", "Sin estandarizar, ¿por qué PC1 apunta casi solo hacia los bytes?", [
+    { t: "Porque los bytes son la métrica más importante de una red.", fb: "PCA no sabe qué variable es importante para el negocio: solo mide varianza numérica." },
+    { t: "Porque los bytes se miden en miles y su varianza numérica es enorme frente a la de la latencia en ms.", ok: true, fb: "Exacto. PCA busca la dirección con más varianza; si una variable tiene valores mucho más grandes, domina. Por eso el paso 2 del método es <b>estandarizar</b> cuando las escalas son diferentes." },
+    { t: "Porque latencia y bytes no están correlacionadas.", fb: `Sí lo están (r = ${num(r)}). Con datos estandarizados PC1 aprovecha esa correlación; el problema es la escala.` },
+    { t: "Porque PCA siempre elige la última columna del dataset.", fb: "El orden de las columnas no influye en el resultado de PCA." },
+  ], actualizarNav);
+  redraw = draw; draw();
+}},
+
+/* ---------- 3. Varianza explicada ---------- */
+{ nombre: "Varianza", listo: () => resuelto("k80"), render(el) {
+  const k80 = kPara(0.8);
+  el.innerHTML = `
+  <div class="grid">
+    <div class="col instr">
+      <span class="eyebrow">Foco 2 · Varianza explicada</span>
+      <h2>¿Cuántas componentes conservar?</h2>
+      <p class="text">Aplicamos PCA a las <b>8 métricas estandarizadas</b> de los 150 eventos. Se obtienen 8 componentes, ordenadas de mayor a menor varianza. Las barras muestran la varianza de cada una; la línea, la <b>varianza acumulada</b>.</p>
+      <div id="q3"></div>
+      <div class="panel" id="umbralBox" ${resuelto("k80") ? "" : "hidden"}>
+        <label for="umb"><b>Explore otro umbral:</b> <span class="mono" id="umbTxt"></span></label>
+        <input type="range" id="umb" min="60" max="95" step="5" value="80">
+        <p class="text" id="umbRes"></p>
+      </div>
+    </div>
+    <div class="col vis">
+      <div class="canvas-box wide"><canvas id="cv3" aria-label="Gráfico de sedimentación con la varianza explicada y acumulada"></canvas></div>
+      <div class="legend"><span><i class="dot" style="background:var(--brand)"></i>Componentes conservadas</span><span><i class="dot" style="background:var(--line)"></i>Descartadas</span><span><i class="dot" style="background:var(--pc2)"></i>Varianza acumulada</span></div>
+    </div>
+  </div>`;
+  const cv = el.querySelector("#cv3"), umb = el.querySelector("#umb");
+  let umbral = 0.8;
+  function draw() {
+    const { ctx, w, h } = prepCanvas(cv); ctx.clearRect(0, 0, w, h);
+    const m = { l: 46, r: 14, t: 18, b: 38 }, W = w - m.l - m.r, H = h - m.t - m.b, n = R.ratio.length, bw = W / n;
+    const Y = v => m.t + H * (1 - v), k = kPara(umbral);
+    ctx.font = `12px ${css("--f-mono")}`;
+    for (let g = 0; g <= 1.0001; g += 0.2) {
+      ctx.strokeStyle = css("--line"); ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(m.l, Y(g)); ctx.lineTo(w - m.r, Y(g)); ctx.stroke();
+      label(ctx, Math.round(g * 100) + "%", m.l - 6, Y(g), css("--muted"), "right", 11, 400);
+    }
+    R.ratio.forEach((v, i) => {
+      ctx.fillStyle = (resuelto("k80") || S.flags.verK) && i < k ? css("--brand") : css("--line");
+      if (!resuelto("k80")) ctx.fillStyle = css("--brand");
+      ctx.fillRect(m.l + i * bw + bw * 0.18, Y(v), bw * 0.64, H * v);
+      label(ctx, "PC" + (i + 1), m.l + i * bw + bw / 2, h - m.b + 16, css("--ink2"), "center", 12);
+      label(ctx, Math.round(v * 100) + "%", m.l + i * bw + bw / 2, Y(v) - 9, css("--ink2"), "center", 11);
+    });
+    ctx.strokeStyle = css("--pc2"); ctx.lineWidth = 2.5; ctx.beginPath();
+    ACUM.forEach((a, i) => { const x = m.l + i * bw + bw / 2; i ? ctx.lineTo(x, Y(a)) : ctx.moveTo(x, Y(a)); }); ctx.stroke();
+    ACUM.forEach((a, i) => { ctx.fillStyle = css("--pc2"); ctx.beginPath(); ctx.arc(m.l + i * bw + bw / 2, Y(a), 4, 0, 7); ctx.fill(); });
+    if (resuelto("k80")) {
+      ctx.setLineDash([6, 5]); ctx.strokeStyle = css("--bad"); ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(m.l, Y(umbral)); ctx.lineTo(w - m.r, Y(umbral)); ctx.stroke(); ctx.setLineDash([]);
+      label(ctx, "umbral " + Math.round(umbral * 100) + "%", w - m.r - 4, Y(umbral) + 11, css("--bad"), "right", 12);
+      el.querySelector("#umbTxt").textContent = Math.round(umbral * 100) + " %";
+      el.querySelector("#umbRes").innerHTML = `Para conservar al menos el <b>${Math.round(umbral * 100)} %</b> se necesitan <b>${k} componente${k > 1 ? "s" : ""}</b> (acumulan ${pct(ACUM[k - 1])}). Se pasa de 8 a ${k} variables.`;
+    }
+  }
+  if (umb) umb.oninput = () => { umbral = +umb.value / 100; draw(); };
+  pregunta(el.querySelector("#q3"), "k80", "El equipo quiere conservar <b>al menos el 80 %</b> de la información. ¿Cuántas componentes necesita?",
+    [1, 2, 3, 4].map(k => ({
+      t: k + (k === 1 ? " componente" : " componentes"), ok: k === k80,
+      fb: k === k80
+        ? `Correcto: PC1 aporta ${pct(R.ratio[0])} y PC2 ${pct(R.ratio[1])}; juntas acumulan <b>${pct(ACUM[1])}</b>. Las 8 métricas se resumen en 2 dimensiones, y las otras 6 componentes aportan poco cada una (se ve el «codo» del gráfico).`
+        : k < k80 ? `Con ${k} componente${k > 1 ? "s" : ""} solo se acumula ${pct(ACUM[k - 1])}, que no llega al 80 %. Lea la línea de varianza acumulada.`
+        : `Con ${k} se supera el 80 % (${pct(ACUM[k - 1])}), pero no es el <b>mínimo</b> necesario: la idea es reducir tanto como sea posible.`,
+    })), () => { el.querySelector("#umbralBox").hidden = false; draw(); actualizarNav(); }, true);
+  redraw = draw; draw();
+}},
+
+/* ---------- 4. Cargas ---------- */
+{ nombre: "Cargas", listo: () => resuelto("nombre1") && resuelto("nombre2"), render(el) {
+  el.innerHTML = `
+  <div class="grid">
+    <div class="col instr">
+      <span class="eyebrow">Foco 3 · Cargas (loadings)</span>
+      <h2>¿Qué significa cada componente?</h2>
+      <p class="text">Una componente no viene con nombre. Para interpretarla se revisan sus <b>cargas</b>: el peso de cada variable original. Con datos estandarizados, una carga cercana a <span class="mono">1</span> o <span class="mono">−1</span> indica que la variable influye mucho; cercana a <span class="mono">0</span>, que casi no influye.</p>
+      <div id="q4a"></div>
+      <div id="q4b"></div>
+      <div id="nota4"></div>
+    </div>
+    <div class="col vis">
+      <div class="canvas-box wide"><canvas id="cv4" aria-label="Gráfico de barras con las cargas de cada variable en PC1 y PC2"></canvas></div>
+      <div class="legend"><span><i class="dot" style="background:var(--brand)"></i>Carga en PC1 (${pct(R.ratio[0], 0)})</span><span><i class="dot" style="background:var(--pc2)"></i>Carga en PC2 (${pct(R.ratio[1], 0)})</span></div>
+    </div>
+  </div>`;
+  const cv = el.querySelector("#cv4");
+  function draw() {
+    const { ctx, w, h } = prepCanvas(cv); ctx.clearRect(0, 0, w, h);
+    const m = { l: Math.min(150, w * 0.36), r: 16, t: 14, b: 26 }, W = w - m.l - m.r, H = h - m.t - m.b, n = VARS.length, rh = H / n;
+    const X = v => m.l + W * (v + 1) / 2;
+    [-1, -0.5, 0, 0.5, 1].forEach(g => { ctx.strokeStyle = css("--line"); ctx.lineWidth = g === 0 ? 2 : 1; ctx.beginPath(); ctx.moveTo(X(g), m.t); ctx.lineTo(X(g), h - m.b); ctx.stroke(); label(ctx, num(g, 1), X(g), h - m.b + 13, css("--muted"), "center", 11, 400); });
+    VARS.forEach((v, i) => {
+      const y = m.t + i * rh;
+      label(ctx, v.nombre, m.l - 8, y + rh / 2, css("--ink"), "right", Math.min(13, w / 40));
+      [[0, "--brand"], [1, "--pc2"]].forEach(([k, col], j) => {
+        const val = R.loadings[k][i], bh = rh * 0.32, yy = y + rh * 0.16 + j * (bh + 2);
+        ctx.fillStyle = css(col); ctx.fillRect(Math.min(X(0), X(val)), yy, Math.abs(X(val) - X(0)), bh);
+      });
+    });
+  }
+  const N1 = [
+    { t: "Carga y congestión de la red", ok: true, fb: "Correcto. Latencia, jitter, pérdida de paquetes y tiempo de respuesta tienen cargas altas (≈0,9) en PC1: cuando hay congestión, todas suben a la vez." },
+    { t: "Volumen de tráfico", fb: "Revise las barras azules de bytes, conexiones y memoria: están cerca de 0 en PC1." },
+    { t: "Seguridad del perímetro", fb: "Ninguna de estas métricas mide seguridad directamente; las cargas altas de PC1 son de calidad de servicio." },
+    { t: "Disponibilidad eléctrica", fb: "No hay variables eléctricas en el dataset. Revise qué variables tienen barras azules largas." },
+  ];
+  const N2 = [
+    { t: "Carga y congestión de la red", fb: "Eso describe a PC1. Revise las barras naranjas: ¿qué variables tienen cargas altas en PC2?" },
+    { t: "Volumen de tráfico", ok: true, fb: "Correcto. Bytes, conexiones y memoria cargan fuerte en PC2 (≈0,9): resume cuánto tráfico mueve la red, de forma independiente de la congestión." },
+    { t: "Errores de configuración", fb: "No hay variables de configuración. PC2 se interpreta por sus cargas altas." },
+    { t: "Ruido sin significado", fb: "PC2 explica una parte importante de la varianza y tiene cargas claras: sí tiene interpretación." },
+  ];
+  pregunta(el.querySelector("#q4a"), "nombre1", "¿Qué nombre describe mejor a <b>PC1</b>?", N1, nota);
+  pregunta(el.querySelector("#q4b"), "nombre2", "¿Y a <b>PC2</b>?", N2, nota);
+  function nota() {
+    if (resuelto("nombre1") && resuelto("nombre2")) {
+      const ic = VARS.findIndex(v => v.id === "cpu");
+      el.querySelector("#nota4").innerHTML = `<div class="fb info">Observe el <b>uso de CPU</b>: carga en ambas componentes (${num(R.loadings[0][ic])} en PC1 y ${num(R.loadings[1][ic])} en PC2) porque sube tanto con la congestión como con el volumen. Las cargas también revelan estas variables «compartidas».</div>`;
+    }
+    actualizarNav();
+  }
+  nota();
+  redraw = draw; draw();
+}},
+
+/* ---------- 5. Proyección ---------- */
+{ nombre: "Proyección", listo: () => resuelto("derecha") && resuelto("arriba"), render(el) {
+  el.innerHTML = `
+  <div class="grid">
+    <div class="col instr">
+      <span class="eyebrow">Foco 4 · Proyección de los datos</span>
+      <h2>Los 150 eventos, vistos en 2 dimensiones</h2>
+      <p class="text">Cada evento se ubica según sus valores en PC1 (horizontal) y PC2 (vertical). Así se ve, en un solo gráfico, información que estaba repartida en 8 columnas. <b>Toque un punto</b> para ver sus métricas originales.</p>
+      <div class="row">
+        <button type="button" id="tColor" aria-pressed="false">Colorear por situación</button>
+        <button type="button" id="tFlechas" aria-pressed="false">Mostrar variables (biplot)</button>
+      </div>
+      <div id="detalle" class="panel"><p class="text">Ningún evento seleccionado.</p></div>
+      <div id="q5a"></div>
+      <div id="q5b"></div>
+    </div>
+    <div class="col vis">
+      <div class="canvas-box"><canvas id="cv5" aria-label="Proyección de los eventos sobre PC1 y PC2"></canvas></div>
+      <div class="legend" id="leg5"></div>
+    </div>
+  </div>`;
+  const cv = el.querySelector("#cv5"), bC = el.querySelector("#tColor"), bF = el.querySelector("#tFlechas");
+  let color = false, flechas = false, sel = -1, geo = null;
+  const colG = { normal: "--g-normal", congestion: "--g-congestion", descarga: "--g-descarga" };
+  bC.onclick = () => { color = !color; bC.setAttribute("aria-pressed", color); bC.classList.toggle("primary", color); draw(); };
+  bF.onclick = () => { flechas = !flechas; bF.setAttribute("aria-pressed", flechas); bF.classList.toggle("primary", flechas); draw(); };
+  function draw() {
+    const { ctx, w, h } = prepCanvas(cv); ctx.clearRect(0, 0, w, h);
+    const s1 = R.scores[0], s2 = R.scores[1];
+    const span = Math.max(...s1.map(Math.abs), ...s2.map(Math.abs)) * 1.12;
+    const sc = Math.min(w, h) / 2 / span, X = x => w / 2 + x * sc, Y = y => h / 2 - y * sc;
+    geo = { X, Y };
+    ctx.strokeStyle = css("--line"); ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(0, h / 2); ctx.lineTo(w, h / 2); ctx.moveTo(w / 2, 0); ctx.lineTo(w / 2, h); ctx.stroke();
+    label(ctx, "PC1 · carga y congestión →", w - 8, h - 14, css("--brand"), "right", 12, 700);
+    label(ctx, "↑ PC2 · volumen", w / 2 + 8, 14, css("--pc2"), "left", 12, 700);
+    RED.rows.forEach((r, i) => {
+      ctx.fillStyle = color ? css(colG[r.grupo]) : css("--muted"); ctx.globalAlpha = color ? .85 : .6;
+      ctx.beginPath(); ctx.arc(X(s1[i]), Y(s2[i]), 4, 0, 7); ctx.fill(); ctx.globalAlpha = 1;
+    });
+    if (sel >= 0) { ctx.strokeStyle = css("--ink"); ctx.lineWidth = 2.5; ctx.beginPath(); ctx.arc(X(s1[sel]), Y(s2[sel]), 8, 0, 7); ctx.stroke(); }
+    if (flechas) {
+      const f = span * 0.62, grupos = [];
+      VARS.forEach((v, j) => {
+        const ax = R.loadings[0][j] * f, ay = R.loadings[1][j] * f, ang = Math.atan2(ay, ax);
+        arrow(ctx, X(0), Y(0), X(ax), Y(ay), css("--ink2"), 1.8);
+        const g = grupos.find(g => Math.abs(g.ang - ang) < 0.3);   // agrupa flechas casi paralelas para que las etiquetas no se encimen
+        const nom = w < 480 ? v.corto : v.nombre;
+        if (g) { g.nombres.push(nom); g.x = Math.max(g.x, ax); g.y = Math.max(g.y, ay); } else grupos.push({ ang, nombres: [nom], x: ax, y: ay });
+      });
+      grupos.forEach(g => {
+        const lines = w < 480 ? [g.nombres.join(", ")] : g.nombres;   // en pantallas pequeñas, una sola línea abreviada
+        const lx = X(g.x), ly = Y(g.y), right = lx < w * 0.62, n = lines.length;
+        lines.forEach((t, k) => {
+          const yy = g.y > 0.05 * span ? ly - 10 - (n - 1 - k) * 14 : ly - 14 - (n - 1 - k) * 14;
+          label(ctx, t, right ? lx + 8 : lx - 8, yy, css("--ink"), right ? "left" : "right", 11.5, 700);
+        });
+      });
+    }
+    el.querySelector("#leg5").innerHTML = color
+      ? GRUPOS.map(g => `<span><i class="dot" style="background:var(${colG[g.id]})"></i>${g.nombre}</span>`).join("")
+      : `<span><i class="dot" style="background:var(--muted)"></i>Eventos (sin etiqueta: así los ve PCA)</span>`;
+  }
+  cv.onclick = e => {
+    if (!geo) return;
+    const r = cv.getBoundingClientRect(), px = e.clientX - r.left, py = e.clientY - r.top;
+    let best = -1, bd = 1e9;
+    R.scores[0].forEach((x, i) => { const d = (geo.X(x) - px) ** 2 + (geo.Y(R.scores[1][i]) - py) ** 2; if (d < bd) { bd = d; best = i; } });
+    if (bd > 400) return;
+    sel = best; const row = RED.rows[sel], g = GRUPOS.find(g => g.id === row.grupo);
+    el.querySelector("#detalle").innerHTML = `<div class="row" style="justify-content:space-between"><b>Evento #${sel + 1}</b><span class="mono">PC1 = ${num(R.scores[0][sel])} · PC2 = ${num(R.scores[1][sel])}</span></div>
+      <table class="vals">${VARS.map(v => `<tr><td>${v.nombre}</td><td>${num(row[v.id], v.id === "conexiones" ? 0 : (v.id === "perdida" ? 2 : 1))} ${v.unidad}</td></tr>`).join("")}</table>
+      ${color ? `<p class="text">Situación simulada: <b>${g.nombre}</b></p>` : ""}`;
+    draw();
+  };
+  pregunta(el.querySelector("#q5a"), "derecha", "Active el color. Los eventos ubicados <b>a la derecha</b> (PC1 alto) corresponden principalmente a…", [
+    { t: "Congestión", ok: true, fb: "Correcto. PC1 resume latencia, jitter, pérdida y tiempo de respuesta: valores altos de PC1 = red congestionada." },
+    { t: "Descarga masiva", fb: "Las descargas masivas se distinguen por PC2 (volumen). Revise en qué dirección se ubican." },
+    { t: "Operación normal", fb: "La operación normal tiene latencias y volúmenes bajos: queda a la izquierda y abajo." },
+    { t: "No se puede saber con PCA", fb: "Con las cargas sí podemos interpretar las posiciones: PC1 alto significa métricas de congestión altas." },
+  ], actualizarNav);
+  pregunta(el.querySelector("#q5b"), "arriba", "¿Y los eventos ubicados <b>arriba</b> (PC2 alto)?", [
+    { t: "Congestión", fb: "La congestión se ubica a la derecha (PC1). PC2 resume otra cosa: revise sus cargas." },
+    { t: "Descarga masiva", ok: true, fb: "Correcto. PC2 resume bytes, conexiones y memoria: arriba están los eventos con mucho volumen de tráfico." },
+    { t: "Operación normal", fb: "La operación normal tiene PC2 bajo." },
+  ], actualizarNav);
+  redraw = draw; draw();
+}},
+
+/* ---------- 6. ¿Cuándo usar PCA? ---------- */
+{ nombre: "¿Cuándo?", listo: () => CASOS.every((c, i) => resuelto("caso" + i)), render(el) {
+  el.innerHTML = `
+  <span class="eyebrow">Ventajas y limitaciones</span>
+  <h2 style="margin:6px 0 8px">¿Es PCA la técnica adecuada?</h2>
+  <p class="text" style="margin-bottom:16px">Decida para cada situación si conviene aplicar PCA directamente.</p>
+  <div class="cards" id="casos"></div>`;
+  const cont = el.querySelector("#casos");
+  CASOS.forEach((c, i) => {
+    const card = document.createElement("div"); card.className = "card";
+    cont.appendChild(card);
+    pregunta(card, "caso" + i, c.txt, [
+      { t: "Sí, aplicar PCA", ok: c.si, fb: c.fb },
+      { t: "No, mejor otra opción", ok: !c.si, fb: c.fb },
+    ], actualizarNav, true);
+  });
+  redraw = () => {};
+}},
+
+/* ---------- 7. Cierre ---------- */
+{ nombre: "Cierre", listo: () => true, render(el) {
+  const ids = Object.keys(S.intentos), total = ids.length, prim = ids.filter(id => S.aciertos[id]).length;
+  const p = total ? prim / total : 0, med = p >= 0.85 ? "oro" : p >= 0.65 ? "plata" : "bronce";
+  el.innerHTML = `
+  <div class="grid">
+    <div class="col">
+      <span class="eyebrow">Misión cumplida</span>
+      <h2>Ya sabe leer un PCA</h2>
+      <div class="row" style="gap:18px">
+        <div class="medal ${med}" role="img" aria-label="Insignia ${med}">${med.toUpperCase()}</div>
+        <div><p class="big">${prim}/${total}</p><p class="text">decisiones correctas al primer intento</p></div>
+      </div>
+      <div class="cards">
+        <div class="card"><b>Componentes principales</b><span class="text">Nuevas variables, combinaciones lineales de las originales. PC1 tiene la mayor varianza.</span></div>
+        <div class="card"><b>Varianza explicada</b><span class="text">Aquí, 2 de 8 componentes conservan ${pct(ACUM[1])} de la información.</span></div>
+        <div class="card"><b>Cargas</b><span class="text">Indican qué variables pesan en cada componente y permiten nombrarla.</span></div>
+        <div class="card"><b>Proyección</b><span class="text">Ubica cada observación en el nuevo espacio para ver grupos y patrones.</span></div>
+      </div>
+    </div>
+    <div class="col">
+      <div class="panel">
+        <h3>Pasos para aplicar PCA (los practicará en el notebook)</h3>
+        <ol class="steps">
+          <li>Seleccionar variables numéricas relevantes.</li>
+          <li>Estandarizar los datos si las escalas son diferentes.</li>
+          <li>Aplicar PCA.</li>
+          <li>Revisar la varianza explicada.</li>
+          <li>Elegir el número de componentes.</li>
+          <li>Interpretar las cargas de las variables.</li>
+          <li>Visualizar la proyección del dataset.</li>
+        </ol>
+      </div>
+      <div class="row">
+        <button type="button" id="again">Reintentar</button>
+        <a class="btn primary" id="toNb" href="${PRACTICA_URL}" target="_blank" rel="noopener">Ir a la práctica (Notebook 2.5)</a>
+        ${CATALOGO_URL ? `<a class="btn" href="${CATALOGO_URL}">Otros recursos</a>` : ""}
+      </div>
+    </div>
+  </div>`;
+  el.querySelector("#again").onclick = () => { S.aciertos = {}; S.intentos = {}; S.flags = {}; S.max = 0; ir(0); };
+  if (PRACTICA_URL === "#") el.querySelector("#toNb").onclick = e => { e.preventDefault(); };
+  redraw = () => {};
+}},
+];
+
+const CASOS = [
+  { txt: "Un dataset tiene <b>15 métricas numéricas</b> de tráfico, muchas correlacionadas, y se quiere visualizar en 2D.", si: true, fb: "Es el escenario ideal: variables numéricas, correlacionadas y necesidad de visualizar." },
+  { txt: "Las variables son <b>protocolo, tipo de alerta y país de origen</b> (todas categóricas).", si: false, fb: "PCA trabaja con variables numéricas. Para asociaciones entre categóricas se usa el <b>análisis de correspondencias</b>." },
+  { txt: "Hay métricas en <b>escalas muy distintas</b> (bytes, ms, %) y se aplicará PCA sin estandarizar.", si: false, fb: "Primero hay que <b>estandarizar</b>: si no, la variable con valores más grandes domina las componentes." },
+  { txt: "Se buscan <b>agrupamientos con formas curvas complejas</b> (no lineales) para una visualización exploratoria.", si: false, fb: "PCA es lineal. Para estructuras no lineales, técnicas como <b>t-SNE</b> o UMAP suelen funcionar mejor." },
+  { txt: "Se quiere <b>reducir el costo computacional</b> de un modelo que usa muchas variables numéricas.", si: true, fb: "PCA puede reducir la dimensionalidad antes de entrenar, mejorando la eficiencia." },
+  { txt: "El dataset tiene <b>valores atípicos sin revisar</b> y se aplicará PCA de inmediato.", si: false, fb: "PCA es sensible a los atípicos: haga antes el EDA y decida cómo tratarlos." },
+];
+
+/* ===== Navegación ===== */
+const elStage = document.getElementById("stage"), bPrev = document.getElementById("btnPrev"), bNext = document.getElementById("btnNext");
+const list = document.getElementById("stageList");
+function actualizarNav() {
+  const e = ETAPAS[S.etapa], listo = e.listo();
+  if (listo) S.max = Math.max(S.max, S.etapa + 1);
+  bPrev.disabled = S.etapa === 0;
+  bNext.hidden = S.etapa === ETAPAS.length - 1;
+  bNext.disabled = !listo;
+  bNext.textContent = S.etapa === 0 ? "Comenzar →" : "Siguiente →";
+  document.getElementById("progressBar").style.width = (S.etapa / (ETAPAS.length - 1) * 100) + "%";
+  list.innerHTML = ETAPAS.map((x, i) => `<li class="${i === S.etapa ? "now" : (i < S.max ? "done" : "")}">${i + 1}. ${x.nombre}</li>`).join("");
+}
+function ir(i) {
+  S.etapa = i; ETAPAS[i].render(elStage); actualizarNav();
+  if (i > 0) elStage.scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" });
+}
+bPrev.onclick = () => S.etapa > 0 && ir(S.etapa - 1);
+bNext.onclick = () => ETAPAS[S.etapa].listo() && ir(S.etapa + 1);
+ir(0);
+
+</script>
+</body>
+</html>
